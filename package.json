@@ -1,0 +1,35 @@
+{
+  "name": "issue-tracker",
+  "version": "1.0.0",
+  "description": "This is my Issue Tracker project for AWD 1111.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start-dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavidJenn/awd1111-issue-tracker.git"
+  },
+  "author": "David Jenn",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DavidJenn/awd1111-issue-tracker/issues"
+  },
+  "homepage": "https://github.com/DavidJenn/awd1111-issue-tracker#readme",
+  "dependencies": {
+    "cookie-parser": "^1.4.5",
+    "debug": "^4.3.2",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "express-handlebars": "^5.3.3",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.1",
+    "nanoid": "^3.1.25"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "html-validate": "^5.5.0",
+    "stylelint": "^13.13.1"
+  }
+}
