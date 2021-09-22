@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const debug = require('debug')('app:server');
-const debugError = require('debug')('app:server');
+const debugError = require('debug')('app:error');
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -13,8 +13,12 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 
 //register routes
-app.use('/api/user', require('./routes/api/user.js'));
-app.use('/api/bug', require('./routes/api/bug.js'));
+app.get('/', (req, res, next) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+})
+
+app.use('/api/user', require('./routes/api/user'));
+app.use('/api/bug', require('./routes/api/bug'));
 app.use('/', express.static('public', {index: 'index.html'}));
 
 // register error handlers
@@ -30,6 +34,9 @@ app.use((err, req, res, next) => {
      .type('text/plain')
      .send(err.message);
 });
+
+//take in public files
+app.use('/', express.static('public'));
 
 // listen for requests
 const hostname = process.env.HOSTNAME || 'localhost';
