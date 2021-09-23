@@ -93,7 +93,7 @@ router.post('/login', (req, res, next) => {
   const { email, password } = req.body;
 
   const userIndex = userArray.findIndex((x) => x.email == email);
-  console.log(userIndex);
+  debug(userIndex);
 
   if (!email || !password) {
     res.status(400).type('text/plain').send('Please enter your login credentials');

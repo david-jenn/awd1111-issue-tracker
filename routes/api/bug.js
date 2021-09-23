@@ -133,14 +133,18 @@ router.put('/:bugId/close', (req, res, next) => {
   if(!bug) {
     res.status(404).type('text/plain').send(`Bug ${bugId} not found`)
   } else {
-    if(closed !== 'true' && closed !== 'false') {
-      res.status(400).type('text/plain').send('Closed must be Entered as true or false');
-    } else if (closed === 'true') {
-      bug.closed = !!closed;
+    if (closed === 'true') {
+      bug.closed = true;
+      bug.closedOn = new Date();
+      bug.lastUpdated = new Date();
       res.status(200).type('text/plain').send('Bug closed!')
-    } else {
-      bug.closed = !closed;
+    } else if (closed === 'false') {
+      bug.closed = false;
+      bug.closedOn = null;
+      bug.lastUpdated = new Date();
       res.status(200).type('text/plain').send('Bug opened!')
+    } else {
+      res.status(400).type('text/plain').send('Closed must be Entered as true or false');
     }
   }
 });
