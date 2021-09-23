@@ -126,7 +126,23 @@ router.put('/:bugId/assign', (req, res, next) => {
   }
 });
 router.put('/:bugId/close', (req, res, next) => {
-  //fixme close bug and json response
+  const bugId = req.params.bugId;
+  const { closed } = req.body;
+
+  const bug = bugsArray.find(x => x._id == bugId);
+  if(!bug) {
+    res.status(404).type('text/plain').send(`Bug ${bugId} not found`)
+  } else {
+    if(closed !== 'true' && closed !== 'false') {
+      res.status(400).type('text/plain').send('Closed must be Entered as true or false');
+    } else if (closed === 'true') {
+      bug.closed = !!closed;
+      res.status(200).type('text/plain').send('Bug closed!')
+    } else {
+      bug.closed = !closed;
+      res.status(200).type('text/plain').send('Bug opened!')
+    }
+  }
 });
 
 module.exports = router;
