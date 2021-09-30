@@ -18,13 +18,16 @@
   },
   "homepage": "https://github.com/DavidJenn/awd1111-issue-tracker#readme",
   "dependencies": {
+    "config": "^3.3.6",
     "cookie-parser": "^1.4.5",
     "debug": "^4.3.2",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "express-handlebars": "^5.3.3",
+    "joi": "^17.4.2",
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
+    "mongodb": "^4.1.2",
     "nanoid": "^3.1.25"
   },
   "devDependencies": {

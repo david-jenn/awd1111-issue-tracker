@@ -1,3 +1,4 @@
+const config = require('config');
 require('dotenv').config();
 
 const debug = require('debug')('app:server');
@@ -5,6 +6,7 @@ const debugError = require('debug')('app:error');
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const dbModule = require('./database');
 
 // create application
 const app = express();
@@ -30,17 +32,15 @@ app.use((req, res, next) => {
 });
 app.use((err, req, res, next) => {
   debugError(err);
-  res.status(500)
-     .type('text/plain')
-     .send(err.message);
+  res.status(500).json( { error: err.message});
 });
 
 //take in public files
 app.use('/', express.static('public'));
 
 // listen for requests
-const hostname = process.env.HOSTNAME || 'localhost';
-const port = process.env.PORT || 5000;
+const hostname = config.get('http.host');
+const port = config.get('http.port');
 app.listen(port, () => {
   debug(`Server running at http://${hostname}:${port}`);
-})
+});

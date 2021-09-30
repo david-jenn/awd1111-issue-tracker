@@ -3,150 +3,165 @@ const express = require('express');
 const moment = require('moment');
 const _ = require('lodash');
 const { nanoid } = require('nanoid');
+const dbModule = require('../../database');
+const { newId } = require('../../database');
 
-//fix me put data in
-const bugsArray = [ 
-  {
-    _id: '1',
-    title: 'Alpha Bug',
-    description: 'This is the Alpha Bug',
-    stepsToReproduce: 'Open up this part of the application and select options'
-  },
-  {
-    _id: '2',
-    title: 'Beta Bug',
-    description: 'This is the Beta Bug',
-    stepsToReproduce: 'Close this application and it does not auto save'
-  },
-  {
-    _id: '3',
-    title: 'Charlie Bug',
-    description: 'This is the Charlie Bug',
-    stepsToReproduce: 'When doing an edit the system does not work properly'
-  }
-];
-
-//create router 
+//create router
 const router = express.Router();
 
 // register routes
-router.get('/list', (req, res, next) => {
-  res.json(bugsArray);
-});
-router.get('/:bugId', (req, res, next) => {
-  const bugId = req.params.bugId;
-  const bug = bugsArray.find(x => x._id == bugId);
-  if(!bug) {
-    res.status(404).type('text/plain').send(`Bug ${bugId} not found`)
-  } else {
-    res.json(bug);
+router.get('/list', async (req, res, next) => {
+  try {
+    const bugs = await dbModule.findAllBugs();
+    debug(bugs);
+    res.status(200).json(bugs);
+  } catch (err) {
+    next(err);
   }
 });
-router.put('/new', (req, res, next) => {
-  const bugId = nanoid();
-  const { _id, title, description, stepsToReproduce } = req.body;
-
-  const bug = {
-    _id: bugId,
-    title,
-    description,
-    stepsToReproduce,
-    createdDate: new Date()
-  }
-  if (!title) {
-    res.status(400).type('text/plain').send('Title must be provided');
-  } else if(!description) {
-    res.status(400).type('text/plain').send('Description must be provided');
-  } else if(!stepsToReproduce) {
-    res.status(400).type('text/plain').send('Steps To Reproduce must be provided');
-  } else {
-    bugsArray.push(bug);
-    res.status(200).type('text/plain').send('New bug reported!');
-  }
-});
-router.put('/:bugId', (req, res, next) => {
-  const bugId = req.params.bugId;
-  const {title, description, stepsToReproduce} = req.body;
-
-  const bug = bugsArray.find(x => x._id == bugId);
-  if(!bug) {
-    res.status(404).type('text/plain').send(`Bug ${bugId} not found`)
-  } else {
-    if(title != undefined) {
-      bug.title = title;
+router.get('/:bugId', async (req, res, next) => {
+  try {
+    const bugId = newId(req.params.bugId);
+    const bug = await dbModule.findBugById(bugId);
+    if (!bug) {
+      res.status(404).json({
+        error: `Bug ${bugId} not found`,
+      });
+    } else {
+      res.status(200).json(bug);
     }
-    if(description != undefined) {
-      bug.description = description;
+  } catch (err) {
+    next(err);
+  }
+});
+router.put('/new', async (req, res, next) => {
+  try {
+    const bug = {
+      _id: newId(),
+      title: req.body.title,
+      description: req.body.description,
+      stepsToReproduce: req.body.stepsToReproduce,
+    };
+    if (!bug.title) {
+      res.status(400).json({
+        error: 'Title must be provided',
+      });
+    } else if (!bug.description) {
+      res.status(400).json({
+        error: 'Description must be provided',
+      });
+    } else if (!bug.stepsToReproduce) {
+      res.status(400).json({
+        error: 'Steps to reproduce must be provided',
+      });
+    } else {
+      await dbModule.insertOneBug(bug);
+      res.status(200).json({
+        message: 'New bug reported',
+      });
     }
-    if(stepsToReproduce != undefined) {
-      bug.stepsToReproduce = stepsToReproduce;
+  } catch (err) {
+    next(err);
+  }
+});
+router.put('/:bugId', async (req, res, next) => {
+  try {
+    const bugId = newId(req.params.bugId);
+    const update = req.body;
+
+    const bug = await dbModule.findBugById(bugId);
+
+    if (!bug) {
+      res.status(404).json({
+        error: 'Bug not found',
+      });
+    } else {
+      await dbModule.updateOneBug(bugId, update);
+      res.status(200).json({
+        message: `Bug ${bugId} updated`,
+      });
     }
-    bug.lastUpdated = new Date();
-    res.status(200).type('text/plain').send('Bug Updated');
-
+  } catch (err) {
+    next(err);
   }
 });
-router.put('/:bugId/classify', (req, res, next) => {
-  const bugId = req.params.bugId;
-  const { classification }  = req.body;
+router.put('/:bugId/classify', async (req, res, next) => {
+  try {
+    const bugId = newId(req.params.bugId);
+    const { classification } = req.body;
 
-  const bug = bugsArray.find(x => x._id == bugId);
-  if(!bug) {
-    res.status(400).type('text/plain').send(`Bug ${bugId} not found`);
-  } else if(!classification) {
-    res.status(400).type('text/plain').send('Must enter a classification')
-  } else {
-    bug.classification = classification
-    bug.classifiedOn = new Date();
-    bug.lastUpdated = new Date();
+    const bug = await dbModule.findBugById(bugId);
 
-    res.status(200).type('text/plain').send('Bug Classified!');
-  }
-
-});
-router.put('/:bugId/assign', (req, res, next) => {
-  const bugId = req.params.bugId;
-  const { assignedToUserId, assignedToUserName } = req.body;
-
-  const bug = bugsArray.find(x => x._id == bugId);
-  
-  if(!bug) {
-    res.status(404).type('text/plain').send(`Bug ${bugId} not found`);
-  } else if (!assignedToUserId){
-    res.status(400).type('text/plain').send('User Assigned to Id is required')
-  } else if (!assignedToUserName) {
-    res.status(400).type('text/plain').send('User Assigned to name is required')
-  } else {
-    bug.assignedToUserId = assignedToUserId;
-    bug.assignedToUserName = assignedToUserName;
-    bug.assignedOn = new Date();
-    bug.lastUpdated = new Date();
-    
-    res.status(200).type('text/plain').send('Bug Assigned!')
+    if (!bug) {
+      res.status(404).json({ Error: 'Bug not found' });
+    } else {
+      await dbModule.updateOneBug(bugId, {
+        classification: classification,
+        classifiedOn: new Date()
+      });
+      res.status(200).json({ message: `Bug ${bugId} classified` });
+    }
+  } catch (err) {
+    next(err);
   }
 });
-router.put('/:bugId/close', (req, res, next) => {
-  const bugId = req.params.bugId;
+router.put('/:bugId/assign', async (req, res, next) => {
+  try {
+    const bugId = newId(req.params.bugId);
+    const { assignedToUserId, assignedToUserName } = req.body;
+
+    const bug = await dbModule.findBugById(bugId);
+    debug(bug);
+
+    if (!bug) {
+      res.status(404).json({ error: 'Bug not found' });
+    } else if (!assignedToUserId) {
+      res.status(400).type('text/plain').send('User Assigned to Id is required');
+    } else if (!assignedToUserName) {
+      res.status(400).type('text/plain').send('User Assigned to name is required');
+    } else {
+      
+      await dbModule.updateOneBug(bugId, {
+        userAssigned: {
+          userId: assignedToUserId,
+          userName: assignedToUserName,
+        },
+        assignedOn: new Date()
+      });
+
+      res.status(200).json({message: `Bug ${bugId} assigned`})
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+router.put('/:bugId/close', async (req, res, next) => {
+  try {
+  const bugId = newId(req.params.bugId);
   const { closed } = req.body;
 
-  const bug = bugsArray.find(x => x._id == bugId);
+  const bug = await dbModule.findBugById(bugId);
   if(!bug) {
-    res.status(404).type('text/plain').send(`Bug ${bugId} not found`)
+    res.status(404).json({message: `Bug ${bugId} not found`})
+  } else if (closed == 'true') {
+    await dbModule.updateOneBug(bugId, {
+      closed: true,
+      closedOn: new Date()
+    });
+    res.status(200).json({message: `Bug ${bugId} closed`})
+  } else if (closed == 'false'){
+    await dbModule.updateOneBug(bugId, {
+      closed: false,
+      closedOn: null
+    });
+    res.status(200).json({message: `Bug ${bugId} opened`});
   } else {
-    if (closed === 'true') {
-      bug.closed = true;
-      bug.closedOn = new Date();
-      bug.lastUpdated = new Date();
-      res.status(200).type('text/plain').send('Bug closed!')
-    } else if (closed === 'false') {
-      bug.closed = false;
-      bug.closedOn = null;
-      bug.lastUpdated = new Date();
-      res.status(200).type('text/plain').send('Bug opened!')
-    } else {
-      res.status(400).type('text/plain').send('Closed must be Entered as true or false');
-    }
+    res.status(400).json({error: 'Must enter true or false'});
   }
+
+} catch(err) {
+  next(err);
+}
 });
 
 module.exports = router;
