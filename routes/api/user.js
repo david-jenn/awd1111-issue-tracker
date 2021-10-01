@@ -2,7 +2,6 @@ const debug = require('debug')('app:route:user');
 const express = require('express');
 const moment = require('moment');
 const _ = require('lodash');
-const { nanoid } = require('nanoid');
 const dbModule = require('../../database');
 const { newId } = require('../../database');
 
@@ -113,6 +112,7 @@ router.delete('/:userId', async (req, res, next) => {
     if (!user) {
       res.status(404).json({ Error: `User ${userId} not found` });
     } else {
+      await dbModule.deleteOneUser(userId);
       res.status(200).json({ message: `User ${userId} deleted` });
     }
   } catch (err) {
