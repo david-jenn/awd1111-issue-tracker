@@ -1,6 +1,6 @@
-const config = require('config');
 require('dotenv').config();
 
+const config = require('config');
 const debug = require('debug')('app:server');
 const debugError = require('debug')('app:error');
 const path = require('path');
