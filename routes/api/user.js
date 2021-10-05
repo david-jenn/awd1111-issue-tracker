@@ -48,7 +48,7 @@ router.get(
   '/:userId',
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-    const userId = newId(req.params.userId);
+    const userId = req.userId;
     const user = await dbModule.findUserById(userId);
     debug(user);
     if (!user) {
@@ -105,7 +105,7 @@ router.put(
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
   
-    const userId = newId(req.params.userId);
+    const userId = req.userId;
     const update = req.body;
 
     const user = await dbModule.findUserById(userId);
@@ -128,7 +128,7 @@ router.delete(
   validId('userId'),
   asyncCatch(async (req, res, next) => {
   
-    const userId = newId(req.params.userId);
+    const userId = req.uerId;
     const user = await dbModule.findUserById(userId);
     if (!user) {
       res.status(404).json({

@@ -7,6 +7,28 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const dbModule = require('./database');
+const { ObjectId } = require('mongodb');
+
+// define custom objectId validator
+const Joi = require('joi');
+Joi.objectId = () => {
+  return Joi.any().custom((value, helpers) => {
+    try {
+      if (!value) {
+        return helpers.error('any.objectId');
+      } else if (typeof value !== 'object' && typeof value !== 'string') {
+        return helpers.error('any.objectId');
+      } else {
+        return new ObjectId(value);
+      }
+    } catch (err) {
+      return helpers.error('any.objectId');
+    }
+  })
+  .rule({
+    message: {'any.objectId': '{#label} was not a valid ObjectId'}
+  })
+}
 
 // create application
 const app = express();

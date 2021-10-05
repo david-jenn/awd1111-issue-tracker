@@ -11,6 +11,8 @@ const { RequestHandler } = require('express');
  * @param {string} paramName the name of the path parameter
  * @returns {RequestHandler} a middleware
  */
+
+//factory function is a function that creates another function
 function validId(paramName) {
   return (req, res, next) => {
     const idString = req.params[paramName];
