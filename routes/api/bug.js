@@ -22,7 +22,7 @@ const updateBugSchema = Joi.object({
   title: Joi.string().trim().min(1),
   description: Joi.string().trim().min(1),
   stepsToReproduce: Joi.string().trim().min(1),
-})
+});
 
 const classifyBugSchema = Joi.object({
   classification: Joi.string().trim().valid('Approved', 'Unapproved', 'Duplicate', 'Unclassified').required(),
@@ -36,6 +36,8 @@ const assignBugSchema = Joi.object({
 const closeBugSchema = Joi.object({
   closed: Joi.string().valid('true', 'false', 'TRUE', 'FALSE').required(),
 }).required();
+
+
 
 //create router
 const router = express.Router();
@@ -174,5 +176,7 @@ router.put(
     }
   })
 );
+
+
 
 module.exports = router;

@@ -136,10 +136,37 @@ async function updateOneBug(bugId, update) {
   );
 }
 
-//Comment CRUD
+//Bug Comment CRUD
 
+async function listBugComments(bugId) {
+  const db = await connect();
+  const comments = await db
+    .collection('comment')
+    .find({ 'bug._id': { $eq: bugId } })
+    .toArray();
+  return comments;
+}
 
-    
+async function findOneComment(bugId, commentId) {
+  const db = await connect();
+  const bug = await db.collection('comment').findOne({
+    _id: {
+      $eq: commentId,
+    }, 'bug._id': {
+      $eq: bugId
+    }
+  });
+  return comment;
+}
+
+async function insertBugComment(comment) {
+  const db = await connect();
+  await db.collection('comment').insertOne({
+    ...comment,
+    createdDate: new Date(),
+  });
+}
+
 // export functions
 module.exports = {
   newId,
@@ -155,6 +182,9 @@ module.exports = {
   findBugById,
   insertOneBug,
   updateOneBug,
+  insertBugComment,
+  listBugComments,
+  findOneComment
 };
 
 ping();

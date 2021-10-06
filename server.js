@@ -39,6 +39,7 @@ app.use(cookieParser());
 //register routes
 app.use('/api/user', require('./routes/api/user'));
 app.use('/api/bug', require('./routes/api/bug'));
+app.use('/api/comment', require('./routes/api/comment'));
 app.use('/', express.static('public', {index: 'index.html'}));
 
 // register error handlers
