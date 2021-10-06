@@ -37,10 +37,6 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 
 //register routes
-app.get('/', (req, res, next) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-})
-
 app.use('/api/user', require('./routes/api/user'));
 app.use('/api/bug', require('./routes/api/bug'));
 app.use('/', express.static('public', {index: 'index.html'}));
@@ -56,9 +52,6 @@ app.use((err, req, res, next) => {
   debugError(err);
   res.status(500).json( { error: err.message});
 });
-
-//take in public files
-app.use('/', express.static('public'));
 
 // listen for requests
 const hostname = config.get('http.host');

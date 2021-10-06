@@ -13,7 +13,7 @@ const { RequestHandler } = require('express');
  */
 
 //factory function is a function that creates another function
-function validId(paramName) {
+const validId = (paramName) => {
   return (req, res, next) => {
     const idString = req.params[paramName];
     try {

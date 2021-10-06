@@ -11,8 +11,7 @@ const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
 
-
-//create schema
+//create schemas
 const newBugSchema = Joi.object({
   title: Joi.string().trim().min(1).required(),
   description: Joi.string().trim().min(1).required(),
@@ -23,19 +22,19 @@ const updateBugSchema = Joi.object({
   title: Joi.string().trim().min(1),
   description: Joi.string().trim().min(1),
   stepsToReproduce: Joi.string().trim().min(1),
-}).required();
+})
 
 const classifyBugSchema = Joi.object({
-  classification: Joi.string().trim().min(1).required(),
+  classification: Joi.string().trim().valid('Approved', 'Unapproved', 'Duplicate', 'Unclassified').required(),
 }).required();
 
 const assignBugSchema = Joi.object({
-  assignedToUserId: Joi.objectId(),
+  assignedToUserId: Joi.objectId().required(),
   assignedToUserName: Joi.string().trim().min(1).required(),
 }).required();
 
 const closeBugSchema = Joi.object({
-  closed: Joi.string().valid('true', 'false').required()
+  closed: Joi.string().valid('true', 'false', 'TRUE', 'FALSE').required(),
 }).required();
 
 //create router
@@ -152,20 +151,19 @@ router.put(
   validId('bugId'),
   validBody(closeBugSchema),
   asyncCatch(async (req, res, next) => {
-  
     const bugId = req.bugId;
     const { closed } = req.body;
 
     const bug = await dbModule.findBugById(bugId);
     if (!bug) {
       res.status(404).json({ message: `Bug not found` });
-    } else if (closed == 'true') {
+    } else if (closed.toLowerCase() == 'true') {
       await dbModule.updateOneBug(bugId, {
         closed: true,
         closedOn: new Date(),
       });
       res.status(200).json({ message: `Bug ${bugId} closed` });
-    } else if (closed == 'false') {
+    } else if (closed.toLowerCase() == 'false') {
       await dbModule.updateOneBug(bugId, {
         closed: false,
         closedOn: null,
@@ -174,8 +172,7 @@ router.put(
     } else {
       res.status(400).json({ error: 'Must enter true or false' });
     }
-  
-})
+  })
 );
 
 module.exports = router;

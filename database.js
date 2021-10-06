@@ -136,6 +136,9 @@ async function updateOneBug(bugId, update) {
   );
 }
 
+//Comment CRUD
+
+
     
 // export functions
 module.exports = {

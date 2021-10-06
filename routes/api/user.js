@@ -18,7 +18,7 @@ const registerUserSchema = Joi.object({
   fullName: Joi.string().trim().min(2).required(),
   givenName: Joi.string().trim().min(1).required(),
   familyName: Joi.string().trim().min(1).required(),
-  role: Joi.string().trim().min(1).required(),
+  role: Joi.string().trim().valid('DEV', 'BA', 'QA', 'PM', 'TM').required(),
 });
 const loginUserSchema = Joi.object({
   email: Joi.string().trim().required(),
@@ -29,7 +29,7 @@ const updateUserSchema = Joi.object({
   fullName: Joi.string().trim().min(2),
   givenName: Joi.string().trim().min(1),
   familyName: Joi.string().trim().min(1),
-  role: Joi.string().trim().min(1),
+  role: Joi.string().trim().valid('DEV', 'BA', 'QA', 'PM', 'TM'),
 });
 
 //create router
@@ -88,7 +88,9 @@ router.post(
 
     const user = await dbModule.findUserByEmail(email);
 
-    if (user.password == password) {
+    if (!user) {
+      res.status(400).json({ error: 'Invalid Login Credentials' });
+    } else if (user.password == password) {
       res.status(200).json({
         message: 'Welcome Back',
       });
@@ -104,7 +106,6 @@ router.put(
   validId('userId'),
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
-  
     const userId = req.userId;
     const update = req.body;
 
@@ -120,14 +121,12 @@ router.put(
         message: `user ${userId} updated`,
       });
     }
-   
-})
+  })
 );
 router.delete(
-  '/:userId', 
+  '/:userId',
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-  
     const userId = req.uerId;
     const user = await dbModule.findUserById(userId);
     if (!user) {
@@ -140,8 +139,7 @@ router.delete(
         message: `User ${userId} deleted`,
       });
     }
- 
-})
+  })
 );
 
 //export router
