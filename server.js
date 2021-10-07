@@ -37,9 +37,12 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 
 //register routes
+
+//first part where you mount it, second part what your mounting
 app.use('/api/user', require('./routes/api/user'));
 app.use('/api/bug', require('./routes/api/bug'));
-app.use('/api/comment', require('./routes/api/comment'));
+app.use('/api/bug', require('./routes/api/comment'));
+app.use('/api/bug', require('./routes/api/test'));
 app.use('/', express.static('public', {index: 'index.html'}));
 
 // register error handlers

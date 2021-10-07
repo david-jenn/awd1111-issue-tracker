@@ -14,12 +14,6 @@ const Joi = require('joi');
 const newCommentSchema = Joi.object({
   text: Joi.string().trim().min(1).required(),
   authorId: Joi.objectId().required(),
-  // authorName: Joi.string().trim().min(1).required(),
-  // author: Joi.object({
-  //   _id: Joi.objectId().required(),
-  //   name: Joi.string().required()
-  // }).required(),
-  // bugTitle: Joi.string().trim().min(1).required(),
 });
 
 const router = express.Router();
@@ -40,7 +34,7 @@ router.get(
   validId('commentId'),
   asyncCatch(async (req, res, next) => {
     const bugId = req.bugId;
-    const commentId = req.bugId;
+    const commentId = req.commentId;
 
     const comment = await dbModule.findOneComment(bugId, commentId);
     res.status(200).json(comment);
@@ -57,20 +51,15 @@ router.put(
     debug(bugId, text, authorId);
 
     const author = await dbModule.findUserById(authorId);
-    const bug = await dbModule.findBugById(bugId);
-
-
     const comment = {
+      _id: newId(),
       text: text,
       author: {
         _id: authorId,
         name: author.fullName,
         role: author.role
       },
-      bug: {
-        _id: bugId,
-        title: bug.title,
-      },
+      bugId: bugId
     };
     debug(comment);
 
