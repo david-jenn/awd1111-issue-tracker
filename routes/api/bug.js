@@ -34,7 +34,7 @@ const assignBugSchema = Joi.object({
 }).required();
 
 const closeBugSchema = Joi.object({
-  closed: Joi.string().valid('true', 'false', 'TRUE', 'FALSE').required(),
+  closed: Joi.string().required(),
 }).required();
 
 
@@ -72,10 +72,11 @@ router.put(
   asyncCatch(async (req, res, next) => {
     const bug = req.body;
     bug._id = newId();
+    const bugId = bug._id;
 
     await dbModule.insertOneBug(bug);
     res.status(200).json({
-      message: 'New bug reported',
+      message: `New bug reported`, bugId
     });
   })
 );
@@ -96,7 +97,7 @@ router.put(
     } else {
       await dbModule.updateOneBug(bugId, update);
       res.status(200).json({
-        message: `Bug ${bugId} updated`,
+        message: `Bug ${bugId} updated, ${bugId}`,
       });
     }
   })
@@ -118,7 +119,7 @@ router.put(
         classification: classification,
         classifiedOn: new Date(),
       });
-      res.status(200).json({ message: `Bug ${bugId} classified` });
+      res.status(200).json({ message: `Bug ${bugId} classified`, bugId });
     }
   })
 );
@@ -129,7 +130,7 @@ router.put(
   asyncCatch(async (req, res, next) => {
     const bugId = req.bugId;
     const { assignedToUserId, assignedToUserName } = req.body;
-
+    debug(typeof(assignedToUserId));
     const bug = await dbModule.findBugById(bugId);
     debug(bug);
 

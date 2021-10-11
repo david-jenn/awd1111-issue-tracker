@@ -138,7 +138,7 @@ async function updateOneBug(bugId, update) {
 
 //Comment CRUD
 
-async function listBugComments(bugId) {
+async function findBugComments(bugId) {
   const db = await connect();
   const comments = await db
     .collection('comment')
@@ -152,9 +152,10 @@ async function findOneComment(bugId, commentId) {
   const comment = await db.collection('comment').findOne({
     _id: {
       $eq: commentId,
-    }, bugId: {
-      $eq: bugId
-    }
+    },
+    bugId: {
+      $eq: bugId,
+    },
   });
   return comment;
 }
@@ -169,10 +170,58 @@ async function insertBugComment(comment) {
 
 //Test Case CRUD
 
+async function findBugTestCases(bugId) {
+  const db = await connect();
+  const bug = await db.collection('bug').findOne({
+    _id: {
+      $eq: bugId,
+    },
+  });
+  return bug.test_cases;
+}
+
+async function findOneTestCase(bugId, testId) {
+  const db = await connect();
+  const bug = await db.collection('bug').findOne({
+    _id: {
+      $eq: bugId,
+    },
+  });
+  return bug.test_cases.find((x) => x._id.equals(testId));
+}
+
 async function insertTestCase(bugId, testCase) {
   const db = await connect();
-  await db.collection('bug').updateOne({_id: {$eq: bugId}}, {$push: {test_cases: testCase} } )
+  testCase.dateTested = new Date();
+  await db.collection('bug').updateOne({ _id: { $eq: bugId } }, { $push: { test_cases: testCase } });
 }
+
+async function updateTestCase(bugId, testId, update) {
+  const db = await connect();
+
+  const updatedFields = {};
+  for (const key in update) {
+    updatedFields['test_cases.$.' + key] = update[key];
+  }
+
+  await db
+    .collection('bug')
+    .updateOne({ _id: { $eq: bugId }, 'test_cases._id': { $eq: testId } }, { $set: updatedFields });
+}
+
+async function deleteOneTestCase(bugId, testId) {
+  const db = await connect();
+  await db.collection('bug').updateOne(
+    {
+      _id: {
+        $eq: bugId,
+      },
+      'test_cases._id': { $eq: testId },
+    },
+    { $pull: { test_cases: { _id: testId } } }
+  );
+}
+
 
 // export functions
 module.exports = {
@@ -189,10 +238,14 @@ module.exports = {
   findBugById,
   insertOneBug,
   updateOneBug,
-  listBugComments,
+  findBugComments,
   findOneComment,
   insertBugComment,
+  findBugTestCases,
+  findOneTestCase,
   insertTestCase,
+  updateTestCase,
+  deleteOneTestCase
 };
 
 ping();

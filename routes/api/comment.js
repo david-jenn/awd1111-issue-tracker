@@ -24,7 +24,7 @@ router.get(
   asyncCatch(async (req, res, next) => {
     const bugId = req.bugId;
     debug(bugId);
-    const comments = await dbModule.listBugComments(bugId);
+    const comments = await dbModule.findBugComments(bugId);
     res.status(200).json(comments);
   })
 );
@@ -36,9 +36,13 @@ router.get(
     const bugId = req.bugId;
     const commentId = req.commentId;
 
+    if(!bugId || !commentId) {
+      res.status(404).json({error: 'comment not found'})
+    }
+    else {
     const comment = await dbModule.findOneComment(bugId, commentId);
     res.status(200).json(comment);
-
+    }
   })
 );
 router.put(
