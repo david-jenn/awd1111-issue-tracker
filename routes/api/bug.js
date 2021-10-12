@@ -76,7 +76,7 @@ router.put(
 
     await dbModule.insertOneBug(bug);
     res.status(200).json({
-      message: `New bug reported`, bugId
+      message: `New bug ${bugId} reported`
     });
   })
 );
@@ -92,12 +92,12 @@ router.put(
 
     if (!bug) {
       res.status(404).json({
-        error: 'Bug not found',
+        error: `Bug ${bugId} not found`,
       });
     } else {
       await dbModule.updateOneBug(bugId, update);
       res.status(200).json({
-        message: `Bug ${bugId} updated, ${bugId}`,
+        message: `Bug ${bugId} updated`
       });
     }
   })
@@ -113,7 +113,7 @@ router.put(
     const bug = await dbModule.findBugById(bugId);
 
     if (!bug) {
-      res.status(404).json({ Error: 'Bug not found' });
+      res.status(404).json({ Error: `Bug ${bugId} not found` });
     } else {
       await dbModule.updateOneBug(bugId, {
         classification: classification,
@@ -135,7 +135,7 @@ router.put(
     debug(bug);
 
     if (!bug) {
-      res.status(404).json({ error: 'Bug not found' });
+      res.status(404).json({ error: `Bug ${bugId} not found` });
     } else {
       await dbModule.updateOneBug(bugId, {
         userAssigned: {
@@ -159,7 +159,7 @@ router.put(
 
     const bug = await dbModule.findBugById(bugId);
     if (!bug) {
-      res.status(404).json({ message: `Bug not found` });
+      res.status(404).json({ message: `Bug ${bugId} not found` });
     } else if (closed.toLowerCase() == 'true') {
       await dbModule.updateOneBug(bugId, {
         closed: true,

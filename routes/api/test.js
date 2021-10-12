@@ -13,16 +13,16 @@ const Joi = require('joi');
 
 const insertTestSchema = Joi.object({
   authorId: Joi.objectId().required(),
-  passed: Joi.string().min(4).required(),
-  text: Joi.string().min(1).required(),
+  passed: Joi.string().trim().min(4).required(),
+  text: Joi.string().trim().min(1).required(),
 });
 
 const updateTestSchema = Joi.object({
-  text: Joi.string().min(1).required(),
+  text: Joi.string().trim().min(1).required(),
 });
 
 const executeTestSchema = Joi.object({
-  passed: Joi.string().min(4).required(),
+  passed: Joi.string().trim().min(4).required(),
 });
 
 const router = express.Router();
@@ -49,7 +49,7 @@ router.get(
     const testCase = await dbModule.findOneTestCase(bugId, testId);
 
     if (!testCase) {
-      res.status(404).json({ error: 'Test Case not found' });
+      res.status(404).json({ error: `Test Case ${testId} not found`});
     } else {
       res.status(200).json(testCase);
     }
@@ -74,6 +74,7 @@ router.put(
       authorRole: author.role,
       text: text,
     };
+    const testId = testCase._id;
 
     if (passed.toLowerCase() === 'true') {
       testCase.passed = true;
@@ -84,7 +85,7 @@ router.put(
     }
     debug(testCase);
     await dbModule.insertTestCase(bugId, testCase);
-    res.status(200).json({ message: 'Test Case Created' });
+    res.status(200).json({ message: `Test Case ${testId} created` });
   })
 );
 
@@ -101,15 +102,16 @@ router.put(
 
     debug(testCase);
     if (!testCase) {
-      res.status(404).status({ error: 'Test case not found' });
+      res.status(404).json({ error: `Test case ${testId} not found` });
     } else {
       const update = {
         text: text,
         lastUpdated: new Date(),
+        
       };
 
       await dbModule.updateTestCase(bugId, testId, update);
-      res.status(200).json({ message: 'Test Case Updated' });
+      res.status(200).json({ message: `Test Case ${testId} Updated` });
     }
   })
 );
@@ -127,18 +129,18 @@ router.put(
 
     debug(testCase);
     if (!testCase) {
-      res.status(404).status({ error: 'Test case not found' });
+      res.status(404).json({ error: `Test Case ${testId} not found` });
     } else {
       const update = { dateTested: new Date() };
 
       if (passed.toLowerCase() === 'true') {
         update.passed = true;
         await dbModule.updateTestCase(bugId, testId, update);
-        res.status(200).json({ message: 'Test Case Updated' });
+        res.status(200).json({ message: `Test Case ${testId} Updated` });
       } else if (passed.toLowerCase() === 'false') {
         update.passed = false;
         await dbModule.executeTestCase(bugId, testId, update);
-        res.status(200).json({ message: 'Test Case Updated' });
+        res.status(200).json({ message: `Test Case ${testId} Updated` });
       } else {
         res.status(400).json({ error: 'passed must be true or false' });
       }
@@ -157,10 +159,10 @@ router.delete(
 
     debug(testCase);
     if (!testCase) {
-      res.status(404).status({ error: 'Test case not found' });
+      res.status(404).json({ error: `Test Case ${testId} not found` });
     } else {
       await dbModule.deleteOneTestCase(bugId, testId);
-      res.status(200).json({ message: 'Test Case Deleted' });
+      res.status(200).json({ message: `Test Case ${testId} Deleted` });
     }
   })
 );

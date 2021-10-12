@@ -36,12 +36,12 @@ router.get(
     const bugId = req.bugId;
     const commentId = req.commentId;
 
-    if(!bugId || !commentId) {
-      res.status(404).json({error: 'comment not found'})
-    }
-    else {
     const comment = await dbModule.findOneComment(bugId, commentId);
-    res.status(200).json(comment);
+
+    if (!comment) {
+      res.status(404).json({ error: `Comment ${commentId} not found` });
+    } else {
+      res.status(200).json(comment);
     }
   })
 );
@@ -61,14 +61,15 @@ router.put(
       author: {
         _id: authorId,
         name: author.fullName,
-        role: author.role
+        role: author.role,
       },
-      bugId: bugId
+      bugId: bugId,
     };
     debug(comment);
+    const commentId = comment._id;
 
     await dbModule.insertBugComment(comment);
-    res.status(200).json({ message: 'comment posted' });
+    res.status(200).json({ message: `Comment ${commentId} posted` });
   })
 );
 

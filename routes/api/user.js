@@ -70,12 +70,12 @@ router.post(
     const emailExists = await dbModule.findUserByEmail(user.email);
     if (emailExists) {
       res.status(400).json({
-        error: 'Email is already registered',
+        error: `Email ${user.email} already registered`,
       });
     } else {
       await dbModule.insertOneUser(user);
       res.status(200).json({
-        Success: 'New User Registered!',
+        Success: `New User ${userId} Registered`
       });
     }
   })
