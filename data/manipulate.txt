@@ -1,0 +1,128 @@
+#1
+db.user.insertMany(
+[
+  {
+    _id: ObjectId("6140e0748212c2a52e4ad4f4"),
+    email: 'bob_williams@insideranken.org',
+    password: 'password',
+    givenName: 'Bob',
+    familyName: 'Williams',
+    fullName: 'Bob Williams',
+    role: 'Developer',
+	dateCreated: new Date(),
+	created_by: {
+	_id: ObjectId("613faa105f9d5885b401f9ca"),
+	email: 'david_jenn@insideranken.org',
+	fullName: 'David Jenn'
+	}
+	
+  }
+])
+
+#2
+db.bug.insertMany(
+[
+  {
+    _id: ObjectId("6140e10a8212c2a52e4ad4f5"),
+    title: 'Echo Bug',
+    description: 'This is the echo bug',
+    stepsToReproduce: 'These are the steps',
+    classification: 'unapproved',
+    dateCreated: new Date(),
+    status: 'open',
+    fixed: false,
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn',
+      role: 'Developer'
+    }
+   
+  }])
+
+#3 
+db.bug.updateOne( 
+	{_id:ObjectId("6140e10a8212c2a52e4ad4f5")}, 
+	{$set: 
+		{'user_assigned._id':ObjectId("613faa105f9d5885b401f9cb"),
+		'user_assigned.assignedBy': ObjectId("613faa105f9d5885b401f9ca"),
+        'user_assigned.dateAssigned': new Date(),		
+		'user_assigned.email': 'john_doe@insideranken.org', 
+		'user_assigned.fullName': 'John Doe', 
+		'user_assigned.role': 'Quality Analyst'
+		
+		
+		}
+	}
+)
+
+#4 
+db.comment.insertMany(
+[
+  {
+    _id: ObjectId("61410a011cdd143ba975eae3"),
+    DateCreated: new Date(),
+    text: 'This is a comment on the Echo Bug',
+    author: { _id: ObjectId("613faa105f9d5885b401f9cb"), name: 'John Doe' },
+    bug: { _id: ObjectId("6140e10a8212c2a52e4ad4f5"), title: 'Echo Bug' }
+  }
+])
+
+#5
+db.test_case.insertMany(
+[
+  {
+	_id: ObjectId("61410a011cdd143ba975eae3"),
+    testDate: new Date(),
+    passed: false,
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9cb"),
+      email: 'john_doe@insideRanken.org',
+      name: 'John Doe'
+    },
+    bug: { _id: ObjectId("6140e10a8212c2a52e4ad4f5"), title: 'Echo Bug' }
+  }
+])
+
+#6
+db.work_session.insertMany(
+[
+  {
+    _id: ObjectId("61410a871cdd143ba975eae4"),
+    hoursWorked: 4.5,
+	workedOnDate: new Date(),
+    bug: { _id: ObjectId("6140e10a8212c2a52e4ad4f5"), title: 'Echo Bug' },
+	author: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn'
+    } 
+  }
+])
+
+
+#7
+db.bug.updateOne( 
+	{_id:ObjectId("6140e10a8212c2a52e4ad4f5")}, 
+	{$set: {fixed: true, 'fixed_by._id': ObjectId("613faa105f9d5885b401f9ca"),
+						'fixed_by.email': 'david_jenn@insideranken',
+						'fixed_by.fullName':'David Jenn',
+						'fixed_by.fixedDate': new Date(),
+						'fixed_by.versionFixed': '2.2'}
+	}
+)
+
+#8 
+db.bug.updateOne( {_id:ObjectId("6140e10a8212c2a52e4ad4f5")}, 
+				{$set: {status: 'closed', 
+				        'closed_by._id': ObjectId("613faa105f9d5885b401f9cb"),
+						'closed_by.email': 'john_doe@insideRanken.org',
+						'closed_by.fullName': 'John Doe',
+						'closed_by.closedDate': new Date()
+						}
+						
+				
+				} 
+				)
+
+

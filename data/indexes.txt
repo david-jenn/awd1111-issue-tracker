@@ -1,0 +1,30 @@
+
+//indexes for User Document
+db.user.createIndex({givenName:1, familyName:1}, {unique:true, name:'full_name'})
+db.user.createIndex({email:1}, {unique:true, name:'email'})
+db.user.createIndex({role:1}, {name: 'role'})
+
+//Indexes for bug
+db.bug.createIndex({title:1}, {unique:true, name:'title'})
+db.bug.createIndex({dateCreated:1}, {name:'dateCreated'})
+db.bug.createIndex({classification: 1}, name:'classification})
+
+//Insert a comment index
+db.comment.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'})
+
+//Insert a test_case index
+db.test_case.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'})
+
+//Insert a edit index
+db.edit.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'})
+
+//Indexes for work_session
+
+
+
+
+
+
+
+
+

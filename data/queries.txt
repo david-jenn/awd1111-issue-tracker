@@ -1,0 +1,107 @@
+1. db.bug.find( {'author._id': {$eq:ObjectId("613faa105f9d5885b401f9ca") } } )
+
+2. db.bug.find( {'user_assigned._id':{$eq:ObjectId("613faa105f9d5885b401f9ca") } } )
+
+3. db.bug.find(  { $or: [ {'author._id' :{$eq: ObjectId("613faa105f9d5885b401f9ca")}}, {'user_assigned._id':{$eq: ObjectId("613faa105f9d5885b401f9ca")} } ] } )
+
+4. db.bug.find( {classification: {$in: [null, '', 'unclassified'  ] } } )
+
+5. db.bug.find( {classification: {$eq: 'approved'}, status: {$eq: 'open' } } )
+
+6. db.bug.find( { status: {$ne: 'closed' } , fixed: {$eq: true} } ) 
+
+7. db.bug.find( { $or: [ {stepsToReproduce : { $exists : false }}, {stepsToReproduce: {$in: [null, ''] } } ] } )
+
+
+8. db.bug.aggregate(
+[
+    {
+        $lookup: {
+            from: 'test_case', 
+            localField: '_id',  
+            foreignField: 'bug._id', 
+            as: 'test_cases'
+        }
+    },
+    {
+        $match: {
+            test_cases: []
+        }
+    }
+])
+
+
+9. db.bug.aggregate(
+[
+    {
+        $lookup: {
+            from: 'work_session', 
+            localField: '_id',  
+            foreignField: 'bug._id', 
+            as: 'hours'
+        }
+    },
+    {
+        $match: {
+            hours: []
+        }
+    }
+])
+
+
+10. db.bug.aggregate(
+[
+    {
+        $lookup: {
+            from: 'comment', 
+            localField: '_id',  
+            foreignField: 'bug._id', 
+            as: 'comments'
+        }
+    },
+	
+    {
+	$project : {
+	    title: 1,
+	    numberOfComments: {$size: '$comments'}
+        }	
+    }
+])
+
+11. db.bug.aggregate(
+[
+    {
+        $lookup: {
+            from: 'work_session', 
+            localField: '_id',  
+            foreignField: 'bug._id', 
+            as: 'hours'
+        }
+    },
+	{
+	    $project : {
+			title: 1,
+			hoursWorkedOn: {$sum: '$hours.hoursWorked'}
+			}
+	}
+])	
+
+12. db.bug.aggregate(
+[
+    {
+        $lookup: {
+            from: 'test_case', 
+            localField: '_id',  
+            foreignField: 'bug._id', 
+            as: 'test_cases'
+        }
+    },
+    {
+        $match: {
+            'test_cases' : { $elemMatch: {passed: {$eq: false } } }  
+        }
+    }
+])
+
+
+

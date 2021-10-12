@@ -1,0 +1,234 @@
+use IssueTracker
+//Create User Document
+
+
+//indexes for User Document
+db.user.createIndex({givenName:1, familyName:1}, {unique:true, name:'full_name'})
+db.user.createIndex({email:1}, {unique:true, name:'email'})
+db.user.createIndex({role:1}, {name: 'role'})
+
+db.user.insertMany(
+	[
+  {
+    _id: ObjectId("613faa105f9d5885b401f9ca"),
+    email: 'david_jenn@insideranken.org',
+    password: 'password',
+    givenName: 'David',
+    familyName: 'Jenn',
+    fullName: 'David Jenn',
+    role: 'Developer',
+	dateCreated: new Date()
+  },
+  {
+    _id: ObjectId("613faa105f9d5885b401f9cb"),
+    email: 'john_doe@insideRanken.org',
+    password: 'password',
+    givenName: 'John',
+    familyName: 'Doe',
+    fullName: 'John Doe',
+    role: 'Quality Analyst',
+	dateCreated: new Date(),
+	created_by: {
+	_id: ObjectId("613faa105f9d5885b401f9ca"),
+	email: 'david_jenn@insideranken.org',
+	fullName: 'David Jenn'
+	}
+  },
+  {
+    _id: ObjectId("613faa105f9d5885b401f9cc"),
+    email: 'steve_price@insideranken.org',
+    givenName: 'Steve',
+    familyName: 'Price',
+    fullName: 'Steve Price',
+    role: 'Technical Manager',
+	dateCreated: new Date()
+  }
+])
+
+//Create Bug Document
+
+//Indexes for bug
+db.bug.createIndex({title:1}, {unique:true, name:'title'})
+db.bug.createIndex({dateCreated:1}, {name:'dateCreated'})
+db.bug.createIndex({classification: 1}, name:'classification})
+
+db.bug.insertMany(
+[
+  {
+    _id: ObjectId("613faacc5f9d5885b401f9cd"),
+    title: 'Alpha Bug',
+    description: 'This is the alpha bug',
+    stepsToReproduce: 'These are the steps',
+    classification: 'approved',
+    dateCreated: new Date(),
+    status: 'open',
+    fixed: false,
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn',
+      role: 'Developer'
+    },
+    user_assigned: {
+      _id: ObjectId("613faa105f9d5885b401f9cb"),
+	  assignedById: ObjectId("613faa105f9d5885b401f9cc"),
+      email: 'John Doe',
+      fullName: 'John Doe',
+      role: 'Quality Analyst'
+    },
+	closed_by: []
+	
+  },
+  {
+    _id: ObjectId("613faacc5f9d5885b401f9ce"), 
+    title: 'Beta Bug',
+    description: 'This is the beta bug',
+    classification: 'unclassified',
+    dateCreated: new Date(),
+    status: 'open',
+    fixed: true,
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn',
+      role: 'Developer'
+	  },
+    user_assigned: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+	  assignedById: ObjectId("613faa105f9d5885b401f9cc"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn',
+      role: 'Developer'
+    }, 
+	closed_by: [],
+	fixed_by: [{
+	  _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn',
+	  fixedDate: new Date(),
+	  versionFixed: '1.3'
+	}]
+  },
+  {
+    _id: ObjectId("613faacc5f9d5885b401f9cf"),
+    title: 'Charlie Bug',
+    description: 'this is the charlie bug',
+    stepsToReproduce: 'these are the steps',
+    classification: 'duplicate',
+    dateCreated: new Date(),
+    status: 'closed',
+    fixed: false,
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9cc"),
+	  assignedById: ObjectId("613faa105f9d5885b401f9cc"),
+      email: 'steveprice@insideranken.org',
+      fullName: 'Steve Price',
+      role: 'Technical Manager'
+    },
+    user_assigned: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      fullName: 'David Jenn',
+      role: 'Developer'
+    },
+	closed_by: [{
+	  _id: ObjectId("613faa105f9d5885b401f9cb"),
+	  email: 'john_doe@insideRanken.org',
+	  fullName: 'John Doe',
+	  closedDate: new Date()
+	}]
+	
+  }
+])
+
+//insert a comment document
+
+//Insert a comment index
+db.comment.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'});
+
+db.comment.insertMany( 
+[
+  {
+    _id: ObjectId("613fab775f9d5885b401f9d0"),
+    DateCreated: new Date(),
+    text: 'This is a comment on the Beta Bug',
+    author: { _id: ObjectId("613faa105f9d5885b401f9cb"), name: 'John Doe' },
+    bug: { _id: ObjectId("613faacc5f9d5885b401f9ce"), title: 'Beta Bug' }
+  }
+])
+
+
+//insert a test_case document
+
+
+//Insert a test_case index
+db.test_case.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'});
+
+db.test_case.insertMany(
+[
+  {
+    _id: ObjectId("613fabbe5f9d5885b401f9d1"),
+    testDate: 'Fri Sep 10 2021 15:38:39 GMT-0500 (Central Daylight Time)',
+    passed: true,
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9cb"),
+      email: 'john_doe@insideRanken.org',
+      name: 'John Doe'
+    },
+    bug: { _id: ObjectId("613faacc5f9d5885b401f9cd"), title: 'Alpha Bug' }
+  }
+])
+
+//insert a edit document
+
+//Insert a edit index
+db.edit.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'});
+
+db.edit.insertMany(
+[
+  {
+    _id: ObjectId("613fac075f9d5885b401f9d2"),
+    editDate: 'Fri Sep 10 2021 16:00:33 GMT-0500 (Central Daylight Time)',
+    changes: 'These are the changes made',
+    author: {
+      _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      name: 'David Jenn'
+    },
+    bug: { _id: ObjectId("613faacc5f9d5885b401f9ce"), title: 'Beta Bug' }
+    
+  }
+])
+
+//insert a bug_work_session document
+
+//Indexes for bug
+db.work_session.createIndex({'bug._id': 1, dateCreated:1}, {name:'DateCreated'});
+
+db.work_session.insertMany(
+[
+  {
+    _id: ObjectId("613fac8c5f9d5885b401f9d3"),
+    hoursWorked: 3.5,
+	workedOnDate: new Date(),
+    author: {
+	 _id: ObjectId("613faa105f9d5885b401f9ca"),
+      email: 'david_jenn@insideranken.org',
+      name: 'David Jenn'
+    },
+	bug: { _id: ObjectId("613faacc5f9d5885b401f9ce"), title: 'Beta Bug' }
+  }
+])
+
+
+
+
+
+
+
+
+
+
+
+
+
