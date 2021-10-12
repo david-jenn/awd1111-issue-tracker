@@ -115,7 +115,7 @@ async function insertOneBug(bug) {
   const db = await connect();
   await db.collection('bug').insertOne({
     ...bug,
-    createdDate: new Date(),
+    createdDate: new Date(), classification: 'unclassified'
   });
 }
 
