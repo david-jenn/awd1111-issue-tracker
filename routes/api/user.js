@@ -73,7 +73,7 @@ router.get(
       match.createdDate = { $lt: minDate };
     }
 
-    let sort = { familyName: 1, givenName: 1, createdDate: 1 };
+    let sort = { givenName: 1, familyName: 1, createdDate: 1 };
     switch (sortBy) {
       case 'givenName':
         sort = { givenName: 1, familyName: 1, createdDate: 1 };

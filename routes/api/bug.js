@@ -30,7 +30,6 @@ const classifyBugSchema = Joi.object({
 
 const assignBugSchema = Joi.object({
   assignedToUserId: Joi.objectId().required(),
-  assignedToUserName: Joi.string().trim().min(1).required(),
 }).required();
 
 const closeBugSchema = Joi.object({
@@ -44,6 +43,7 @@ const router = express.Router();
 router.get(
   '/list',
   asyncCatch(async (req, res, next) => {
+    //Get inputs
     let { keywords, classification, maxAge, minAge, open, closed, sortBy, pageSize, pageNumber } = req.query;
     minAge = parseInt(minAge);
     maxAge = parseInt(maxAge);
@@ -57,6 +57,7 @@ router.get(
     const maxDate = new Date(today);
     const minDate = new Date(today);
 
+    //match
     const match = {};
 
     if (keywords) {
@@ -77,38 +78,52 @@ router.get(
       match.createdDate = { $lt: minDate };
     }
 
-    if (open) {
-      if (open.toLowerCase() === 'false') {
-        open = false;
-      } else {
-        open = true;
-      }
-    } else {
-      open = true;
-    }
-    //open = open.toLowerCase() === 'false' ? false : true;
-    if (closed) {
-      if (closed.toLowerCase() === 'true') {
-        closed = true;
-      } else {
-        closed = false;
-      }
-    }
-    //closed = closed.toLowerCase() === 'true' ? true : false;
+    open = open ?? true;
+    closed = closed ?? false;
+    debug(closed);
+    open = open === true || open.toLowerCase() === 'true';
+    closed = closed === true || closed.toString().toLowerCase() === 'true';
     debug(closed, open);
+
     if (closed && open) {
-      match.closed = { $in: [true, false] };
-    } else if (!closed && open) {
-      match.closed = { $eq: false };
-    } else if (closed && !open) {
+      // No filter because all bugs should be shown
+    } else if (open) {
+      match.closed = { $in: [null, false] };
+    } else if (closed) {
       match.closed = { $eq: true };
     } else {
       return res.send([]);
     }
 
-    debug(typeof open, typeof closed);
+    //sort
+    let sort = { createdDate: -1 };
+    switch (sortBy) {
+      case 'newest':
+        sort = { createdDate: -1 };
+        break;
+      case 'oldest':
+        sort = { createdDate: 1 };
+        break;
+      case 'title':
+        sort = { title: 1, createdDate: 1 };
+        break;
+      case 'classification':
+        sort = { classification: 1, createdDate: 1 };
+        break;
+      case 'assignedTo':
+        sort = { 'userAssigned.userName': 1, createdDate: 1 };
+        break;
+      case 'createdBy':
+        sort = { 'author.fullName': 1, createdDate: 1 };
+        break;
+    }
 
-    const pipeline = [{ $match: match }];
+    pageNumber = parseInt(pageNumber) || 1;
+    pageSize = parseInt(pageSize) || 5;
+    const skip = (pageNumber - 1) * pageSize;
+    const limit = pageSize;
+    
+    const pipeline = [{ $match: match }, { $sort: sort}, {$skip: skip}, { $limit: limit } ];
     debug(pipeline);
 
     const db = await connect();
@@ -196,18 +211,23 @@ router.put(
   validBody(assignBugSchema),
   asyncCatch(async (req, res, next) => {
     const bugId = req.bugId;
-    const { assignedToUserId, assignedToUserName } = req.body;
+    const { assignedToUserId, } = req.body;
     debug(typeof assignedToUserId);
     const bug = await dbModule.findBugById(bugId);
+    const user = await dbModule.findUserById(assignedToUserId);
     debug(bug);
+    debug(user);
 
     if (!bug) {
       res.status(404).json({ error: `Bug ${bugId} not found` });
+    } else if (!user) {
+      res.status(404).json({ error: 'User not found'});
     } else {
       await dbModule.updateOneBug(bugId, {
         userAssigned: {
           userId: assignedToUserId,
-          userName: assignedToUserName,
+          userName: user.fullName,
+          role: user.role
         },
         assignedOn: new Date(),
       });
