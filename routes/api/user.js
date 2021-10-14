@@ -3,7 +3,7 @@ const express = require('express');
 const moment = require('moment');
 const _ = require('lodash');
 const dbModule = require('../../database');
-const { newId } = require('../../database');
+const { newId, connect } = require('../../database');
 
 const asyncCatch = require('../../middleware/async-catch');
 const validId = require('../../middleware/valid-id');
@@ -39,9 +39,71 @@ const router = express.Router();
 router.get(
   '/list',
   asyncCatch(async (req, res, next) => {
-    const users = await dbModule.findAllUsers();
-    debug(users);
-    res.json(users);
+    let { keywords, role, maxAge, minAge, sortBy, pageSize, pageNumber } = req.query;
+    debug(req.query);
+    minAge = parseInt(minAge);
+    maxAge = parseInt(maxAge);
+
+    const today = new Date();
+    today.setHours(0);
+    today.setMinutes(0);
+    today.setSeconds(0);
+    today.setMilliseconds(0);
+    debug(today);
+    const maxDate = new Date(today);
+    const minDate = new Date(today);
+
+    const match = {};
+
+    if (keywords) {
+      match.$text = { $search: keywords };
+    }
+    if (role) {
+      match.role = { $eq: role };
+    }
+    if (maxAge && minAge) {
+      maxDate.setDate(today.getDate() - maxAge);
+      minDate.setDate(today.getDate() - minAge + 1);
+      match.createdDate = { $gte: maxDate, $lt: minDate };
+    } else if (maxAge) {
+      maxDate.setDate(today.getDate() - maxAge);
+      match.createdDate = { $gte: maxDate };
+    } else if (minAge) {
+      minDate.setDate(today.getDate() - minAge + 1);
+      match.createdDate = { $lt: minDate };
+    }
+
+    let sort = { familyName: 1, givenName: 1, createdDate: 1 };
+    switch (sortBy) {
+      case 'givenName':
+        sort = { givenName: 1, familyName: 1, createdDate: 1 };
+        break;
+      case 'familyName':
+        sort = { familyName: 1, givenName: 1, createdDate: 1 };
+        break;
+      case 'role':
+        sort = { role: 1, givenName: 1, familyName: 1, createdDate: 1 };
+        break;
+      case 'newest':
+        sort = { createdDate: -1 };
+        break;
+      case 'oldest':
+        sort = { createDate: 1 };
+        break;
+    }
+
+    pageNumber = parseInt(pageNumber) || 1;
+    pageSize = parseInt(pageSize) || 5;
+    const skip = (pageNumber - 1) * pageSize;
+    const limit = pageSize;
+
+    const pipeline = [{ $match: match }, { $sort: sort }, { $skip: skip }, { $limit: limit }];
+    debug(pipeline);
+
+    const db = await connect();
+    const cursor = db.collection('user').aggregate(pipeline);
+    const results = await cursor.toArray();
+    res.status(200).send(results);
   })
 );
 router.get(
@@ -75,7 +137,7 @@ router.post(
     } else {
       await dbModule.insertOneUser(user);
       res.status(200).json({
-        Success: `New User ${userId} Registered`
+        Success: `New User ${userId} Registered`,
       });
     }
   })

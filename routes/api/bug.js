@@ -3,7 +3,7 @@ const express = require('express');
 const moment = require('moment');
 const _ = require('lodash');
 const dbModule = require('../../database');
-const { newId } = require('../../database');
+const { newId, connect } = require('../../database');
 
 const asyncCatch = require('../../middleware/async-catch');
 const validId = require('../../middleware/valid-id');
@@ -37,8 +37,6 @@ const closeBugSchema = Joi.object({
   closed: Joi.string().required(),
 }).required();
 
-
-
 //create router
 const router = express.Router();
 
@@ -46,8 +44,77 @@ const router = express.Router();
 router.get(
   '/list',
   asyncCatch(async (req, res, next) => {
-    const bugs = await dbModule.findAllBugs();
-    res.status(200).json(bugs);
+    let { keywords, classification, maxAge, minAge, open, closed, sortBy, pageSize, pageNumber } = req.query;
+    minAge = parseInt(minAge);
+    maxAge = parseInt(maxAge);
+
+    const today = new Date();
+    today.setHours(0);
+    today.setMinutes(0);
+    today.setSeconds(0);
+    today.setMilliseconds(0);
+
+    const maxDate = new Date(today);
+    const minDate = new Date(today);
+
+    const match = {};
+
+    if (keywords) {
+      match.$text = { $search: keywords };
+    }
+    if (classification) {
+      match.classification = { $eq: classification };
+    }
+    if (maxAge && minAge) {
+      maxDate.setDate(today.getDate() - maxAge);
+      minDate.setDate(today.getDate() - minAge + 1);
+      match.createdDate = { $gte: maxDate, $lt: minDate };
+    } else if (maxAge) {
+      maxDate.setDate(today.getDate() - maxAge);
+      match.createdDate = { $gte: maxDate };
+    } else if (minAge) {
+      minDate.setDate(today.getDate() - minAge + 1);
+      match.createdDate = { $lt: minDate };
+    }
+
+    if (open) {
+      if (open.toLowerCase() === 'false') {
+        open = false;
+      } else {
+        open = true;
+      }
+    } else {
+      open = true;
+    }
+    //open = open.toLowerCase() === 'false' ? false : true;
+    if (closed) {
+      if (closed.toLowerCase() === 'true') {
+        closed = true;
+      } else {
+        closed = false;
+      }
+    }
+    //closed = closed.toLowerCase() === 'true' ? true : false;
+    debug(closed, open);
+    if (closed && open) {
+      match.closed = { $in: [true, false] };
+    } else if (!closed && open) {
+      match.closed = { $eq: false };
+    } else if (closed && !open) {
+      match.closed = { $eq: true };
+    } else {
+      return res.send([]);
+    }
+
+    debug(typeof open, typeof closed);
+
+    const pipeline = [{ $match: match }];
+    debug(pipeline);
+
+    const db = await connect();
+    const cursor = db.collection('bug').aggregate(pipeline);
+    const results = await cursor.toArray();
+    res.status(200).send(results);
   })
 );
 router.get(
@@ -76,7 +143,7 @@ router.put(
 
     await dbModule.insertOneBug(bug);
     res.status(200).json({
-      message: `New bug ${bugId} reported`
+      message: `New bug ${bugId} reported`,
     });
   })
 );
@@ -97,7 +164,7 @@ router.put(
     } else {
       await dbModule.updateOneBug(bugId, update);
       res.status(200).json({
-        message: `Bug ${bugId} updated`
+        message: `Bug ${bugId} updated`,
       });
     }
   })
@@ -130,7 +197,7 @@ router.put(
   asyncCatch(async (req, res, next) => {
     const bugId = req.bugId;
     const { assignedToUserId, assignedToUserName } = req.body;
-    debug(typeof(assignedToUserId));
+    debug(typeof assignedToUserId);
     const bug = await dbModule.findBugById(bugId);
     debug(bug);
 
@@ -177,7 +244,5 @@ router.put(
     }
   })
 );
-
-
 
 module.exports = router;
