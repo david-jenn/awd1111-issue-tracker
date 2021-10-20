@@ -51,10 +51,7 @@ async function findUserById(userId) {
 async function insertOneUser(user) {
   const db = await connect();
 
-  await db.collection('user').insertOne({
-    ...user,
-    createdDate: new Date(),
-  });
+  await db.collection('user').insertOne(user);
 }
 
 async function findUserByEmail(email) {
@@ -78,7 +75,6 @@ async function updateOneUser(userId, update) {
     {
       $set: {
         ...update,
-        lastUpdated: new Date(),
       },
     }
   );
@@ -115,7 +111,8 @@ async function insertOneBug(bug) {
   const db = await connect();
   await db.collection('bug').insertOne({
     ...bug,
-    createdDate: new Date(), classification: 'unclassified'
+    createdDate: new Date(),
+    classification: 'unclassified',
   });
 }
 
@@ -222,7 +219,10 @@ async function deleteOneTestCase(bugId, testId) {
   );
 }
 
-
+async function saveEdit(edit) {
+  const db = await connect();
+  return await db.collection('edit').insertOne(edit);
+}
 // export functions
 module.exports = {
   newId,
@@ -245,7 +245,8 @@ module.exports = {
   findOneTestCase,
   insertTestCase,
   updateTestCase,
-  deleteOneTestCase
+  deleteOneTestCase,
+  saveEdit,
 };
 
 ping();

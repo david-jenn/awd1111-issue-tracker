@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/DavidJenn/awd1111-issue-tracker#readme",
   "dependencies": {
+    "bcrypt": "^5.0.1",
     "config": "^3.3.6",
     "cookie-parser": "^1.4.5",
     "debug": "^4.3.2",
@@ -25,6 +26,7 @@
     "express": "^4.17.1",
     "express-handlebars": "^5.3.3",
     "joi": "^17.4.2",
+    "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
     "mongodb": "^4.1.2",

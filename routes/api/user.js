@@ -1,7 +1,10 @@
+const config = require('config');
 const debug = require('debug')('app:route:user');
 const express = require('express');
 const moment = require('moment');
 const _ = require('lodash');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const dbModule = require('../../database');
 const { newId, connect } = require('../../database');
 
@@ -39,6 +42,11 @@ const router = express.Router();
 router.get(
   '/list',
   asyncCatch(async (req, res, next) => {
+
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     let { keywords, role, maxAge, minAge, sortBy, pageSize, pageNumber } = req.query;
     debug(req.query);
     minAge = parseInt(minAge);
@@ -110,6 +118,11 @@ router.get(
   '/:userId',
   validId('userId'),
   asyncCatch(async (req, res, next) => {
+
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+    
     const userId = req.userId;
     const user = await dbModule.findUserById(userId);
     debug(user);
@@ -128,16 +141,52 @@ router.post(
   asyncCatch(async (req, res, next) => {
     const user = req.body;
     user._id = newId();
+    user.createdOn = new Date();
+    
+    
+
+    //hash password
+    const saltRounds = parseInt(config.get('auth.saltRounds'));
+    user.password = await bcrypt.hash(user.password, saltRounds);
 
     const emailExists = await dbModule.findUserByEmail(user.email);
+    debug(emailExists);
     if (emailExists) {
       res.status(400).json({
         error: `Email ${user.email} already registered`,
       });
     } else {
+
+      const edit = {
+        timestamp: new Date(),
+        operation: 'insert',
+        col: 'user',
+        target: { userId: user._id },
+        update: user,
+        auth: req.auth,
+      };
+
       await dbModule.insertOneUser(user);
+      await dbModule.saveEdit(edit);
+
+      const authPayload = {
+        _id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      };
+
+      const authSecret = config.get('auth.secret');
+      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
+      const authToken = jwt.sign(authPayload, authSecret, authOptions);
+
+      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
+      res.cookie('authToken', authToken, cookieOptions);
+
       res.status(200).json({
-        Success: `New User ${userId} Registered`,
+        success: 'New User Registered',
+        userId: user._id,
+        token: authToken,
       });
     }
   })
@@ -149,13 +198,25 @@ router.post(
     const { email, password } = req.body;
 
     const user = await dbModule.findUserByEmail(email);
+    debug(user);
 
-    if (!user) {
-      res.status(400).json({ error: 'Invalid Login Credentials' });
-    } else if (user.password == password) {
-      res.status(200).json({
-        message: `Welcome Back ${userId}`,
-      });
+    if (user && (await bcrypt.compare(password, user.password))) {
+      //issue token
+      const authPayload = {
+        _id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      };
+
+      const authSecret = config.get('auth.secret');
+      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
+      const authToken = jwt.sign(authPayload, authSecret, authOptions);
+
+      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
+      res.cookie('authToken', authToken, cookieOptions);
+
+      res.json({ message: 'Welcome back', userId: user._id, token: authToken });
     } else {
       res.status(400).json({
         error: 'Invalid login credentials',
@@ -168,8 +229,27 @@ router.put(
   validId('userId'),
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(400).json({ error: 'You must be logged in' });
+    }
+
     const userId = req.userId;
     const update = req.body;
+
+    if (update.password) {
+      const saltRounds = parseInt(config.get('auth.saltRounds'));
+      update.password = await bcrypt.hash(update.password, saltRounds);
+    }
+
+    if (Object.keys(update).length > 0) {
+      update.lastUpdatedOn = new Date();
+      update.lastUpdatedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      }
+    }
 
     const user = await dbModule.findUserById(userId);
 
@@ -178,7 +258,18 @@ router.put(
         Error: `User ${userId} not found`,
       });
     } else {
+
+      const edit = {
+        timestamp: new Date(),
+        operation: 'update',
+        col: 'user',
+        target: { userId },
+        update,
+        auth: req.auth,
+      };
+
       await dbModule.updateOneUser(userId, update);
+      await dbModule.saveEdit(edit);
       res.status(200).json({
         message: `user ${userId} updated`,
       });
@@ -189,13 +280,27 @@ router.delete(
   '/:userId',
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-    const userId = req.uerId;
+
+    if (!req.auth) {
+      return res.status(400).json({ error: 'You must be logged in' });
+    }
+
+    const userId = req.userId;
     const user = await dbModule.findUserById(userId);
     if (!user) {
       res.status(404).json({
         Error: `User ${userId} not found`,
       });
     } else {
+
+      const edit = {
+        timestamp: new Date(),
+        operation: 'delete',
+        col: 'user',
+        target: { userId },
+        auth: req.auth,
+      };
+      await dbModule.saveEdit(edit);
       await dbModule.deleteOneUser(userId);
       res.status(200).json({
         message: `User ${userId} deleted`,

@@ -9,6 +9,22 @@ const cookieParser = require('cookie-parser');
 const dbModule = require('./database');
 const { ObjectId } = require('mongodb');
 
+if(!config.get('db.url')) {
+  throw new Error('db.url not defined');
+};
+if(!config.get('auth.secret')){
+  throw new Error('auth.secret not defined');
+};
+if(!config.get('auth.tokenExpiresIn')) {
+  throw new Error('auth.tokenExpiresIn not defined');
+};
+if(!config.get('auth.cookieMaxAge')) {
+  throw new Error('auth.cookieMaxAge not defined');
+}
+if(!config.get('auth.saltRounds')) {
+  throw new Error('auth.saltRounds not defined');
+};
+
 // define custom objectId validator
 const Joi = require('joi');
 Joi.objectId = () => {
@@ -35,6 +51,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
+app.use(require('./middleware/auth')());
 
 //register routes
 
