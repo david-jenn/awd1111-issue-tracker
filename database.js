@@ -66,7 +66,7 @@ async function findUserByEmail(email) {
 
 async function updateOneUser(userId, update) {
   const db = await connect();
-  await db.collection('user').updateOne(
+  return await db.collection('user').updateOne(
     {
       _id: {
         $eq: userId,

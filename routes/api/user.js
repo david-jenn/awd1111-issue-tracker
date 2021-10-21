@@ -13,6 +13,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
+const { json } = require('express');
 
 //create schemas
 const registerUserSchema = Joi.object({
@@ -21,7 +22,6 @@ const registerUserSchema = Joi.object({
   fullName: Joi.string().trim().min(2).required(),
   givenName: Joi.string().trim().min(1).required(),
   familyName: Joi.string().trim().min(1).required(),
-  role: Joi.string().trim().valid('DEV', 'BA', 'QA', 'PM', 'TM').required(),
 });
 const loginUserSchema = Joi.object({
   email: Joi.string().trim().required(),
@@ -42,7 +42,6 @@ const router = express.Router();
 router.get(
   '/list',
   asyncCatch(async (req, res, next) => {
-
     if (!req.auth) {
       return res.status(401).json({ error: 'You must be logged in' });
     }
@@ -101,7 +100,7 @@ router.get(
     }
 
     pageNumber = parseInt(pageNumber) || 1;
-    pageSize = parseInt(pageSize) || 5;
+    pageSize = parseInt(pageSize) || 20;
     const skip = (pageNumber - 1) * pageSize;
     const limit = pageSize;
 
@@ -118,11 +117,10 @@ router.get(
   '/:userId',
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-
     if (!req.auth) {
       return res.status(401).json({ error: 'You must be logged in' });
     }
-    
+
     const userId = req.userId;
     const user = await dbModule.findUserById(userId);
     debug(user);
@@ -141,39 +139,34 @@ router.post(
   asyncCatch(async (req, res, next) => {
     const user = req.body;
     user._id = newId();
-    user.createdOn = new Date();
-    
-    
+    user.role = null;
+    user.createdDate = new Date();
 
     //hash password
     const saltRounds = parseInt(config.get('auth.saltRounds'));
     user.password = await bcrypt.hash(user.password, saltRounds);
 
     const emailExists = await dbModule.findUserByEmail(user.email);
-    debug(emailExists);
+
     if (emailExists) {
       res.status(400).json({
         error: `Email ${user.email} already registered`,
       });
     } else {
-
       const edit = {
         timestamp: new Date(),
-        operation: 'insert',
+        op: 'insert',
         col: 'user',
         target: { userId: user._id },
         update: user,
         auth: req.auth,
       };
 
-      await dbModule.insertOneUser(user);
-      await dbModule.saveEdit(edit);
-
       const authPayload = {
         _id: user._id,
         email: user.email,
         fullName: user.fullName,
-        role: user.role,
+        role: null,
       };
 
       const authSecret = config.get('auth.secret');
@@ -182,6 +175,9 @@ router.post(
 
       const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
       res.cookie('authToken', authToken, cookieOptions);
+
+      await dbModule.insertOneUser(user);
+      await dbModule.saveEdit(edit);
 
       res.status(200).json({
         success: 'New User Registered',
@@ -198,10 +194,9 @@ router.post(
     const { email, password } = req.body;
 
     const user = await dbModule.findUserByEmail(email);
-    debug(user);
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      //issue token
+      // issue token
       const authPayload = {
         _id: user._id,
         email: user.email,
@@ -225,12 +220,78 @@ router.post(
   })
 );
 router.put(
+  '/me',
+  validId('userId'),
+  validBody(updateUserSchema),
+  asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
+    const userId = newId(req.auth._id);
+    const update = req.body;
+
+    if (update.password) {
+      const saltRounds = parseInt(config.get('auth.saltRounds'));
+      update.password = await bcrypt.hash(update.password, saltRounds);
+    }
+
+    if (Object.keys(update).length > 0) {
+      update.lastUpdatedOn = new Date();
+      update.lastUpdatedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      };
+    } else {
+      return res.json({ message: 'no fields edited' });
+    }
+
+    const dbResult = await dbModule.updateOneUser(userId, update);
+
+    if (dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'user',
+        target: { userId },
+        update,
+        auth: req.auth,
+      };
+
+      await dbModule.saveEdit(edit);
+
+      const authPayload = {
+        _id: userId,
+        email: update.email ?? req.auth.email,
+        fullName: update.fullName ?? req.auth.fullName,
+        role: update.role ?? req.auth.role,
+      };
+      debug(authPayload);
+
+      const authSecret = config.get('auth.secret');
+      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
+      const authToken = jwt.sign(authPayload, authSecret, authOptions);
+
+      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
+      res.cookie('authToken', authToken, cookieOptions);
+
+      res.status(200).json({
+        message: `user ${userId} updated`,
+      });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  })
+);
+router.put(
   '/:userId',
   validId('userId'),
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
     if (!req.auth) {
-      return res.status(400).json({ error: 'You must be logged in' });
+      return res.status(401).json({ error: 'You must be logged in' });
     }
 
     const userId = req.userId;
@@ -248,31 +309,49 @@ router.put(
         email: req.auth.email,
         fullName: req.auth.fullName,
         role: req.auth.role,
-      }
+      };
+    }
+    else {
+      return res.json({message: 'No fields edited'})
     }
 
-    const user = await dbModule.findUserById(userId);
+    const dbResult = await dbModule.updateOneUser(userId, update);
 
-    if (!user) {
-      res.status(404).json({
-        Error: `User ${userId} not found`,
-      });
-    } else {
-
+    
+    if(dbResult.matchedCount > 0) {
       const edit = {
         timestamp: new Date(),
-        operation: 'update',
+        op: 'update',
         col: 'user',
         target: { userId },
         update,
         auth: req.auth,
       };
 
+      if (userId.equals(newId(req.auth._id))) {
+        const authPayload = {
+          _id: user._id,
+          email: update.email ?? user.email,
+          fullName: update.fullName ?? user.fullName,
+          role: update.role ?? user.role,
+        };
+        debug(authPayload);
+
+        const authSecret = config.get('auth.secret');
+        const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
+        const authToken = jwt.sign(authPayload, authSecret, authOptions);
+
+        const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
+        res.cookie('authToken', authToken, cookieOptions);
+      }
+
       await dbModule.updateOneUser(userId, update);
       await dbModule.saveEdit(edit);
       res.status(200).json({
         message: `user ${userId} updated`,
       });
+    } else {
+      res.status(404).json({error: `User ${userId} not found`})
     }
   })
 );
@@ -280,9 +359,8 @@ router.delete(
   '/:userId',
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-
     if (!req.auth) {
-      return res.status(400).json({ error: 'You must be logged in' });
+      return res.status(401).json({ error: 'You must be logged in' });
     }
 
     const userId = req.userId;
@@ -292,7 +370,6 @@ router.delete(
         Error: `User ${userId} not found`,
       });
     } else {
-
       const edit = {
         timestamp: new Date(),
         operation: 'delete',

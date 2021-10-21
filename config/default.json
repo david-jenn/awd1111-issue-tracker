@@ -10,7 +10,7 @@
   "auth": {
     "secret": "",
     "tokenExpiresIn": "24h",
-    "cookieMaxAge": 1200000,
+    "cookieMaxAge": 14400000,
     "saltRounds": 10
   }
 }
