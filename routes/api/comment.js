@@ -13,8 +13,7 @@ const Joi = require('joi');
 
 const newCommentSchema = Joi.object({
   text: Joi.string().trim().min(1).required(),
-  authorId: Joi.objectId().required(),
-});
+ });
 
 const router = express.Router();
 
@@ -22,6 +21,11 @@ router.get(
   '/:bugId/comment/list',
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
+
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
     debug(bugId);
     const comments = await dbModule.findBugComments(bugId);
@@ -33,6 +37,11 @@ router.get(
   validId('bugId'),
   validId('commentId'),
   asyncCatch(async (req, res, next) => {
+
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
     const commentId = req.commentId;
 
@@ -50,18 +59,22 @@ router.put(
   validId('bugId'),
   validBody(newCommentSchema),
   asyncCatch(async (req, res, next) => {
-    const bugId = req.bugId;
-    const { text, authorId } = req.body;
-    debug(bugId, text, authorId);
 
-    const author = await dbModule.findUserById(authorId);
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+    
+    const bugId = req.bugId;
+    const text = req.body;
+
     const comment = {
       _id: newId(),
       text: text,
       author: {
-        _id: authorId,
-        name: author.fullName,
-        role: author.role,
+        _id: req.auth._id,
+        fullName: req.auth.fullName,
+        email: req.auth.email,
+        role: req.auth.role,
       },
       bugId: bugId,
     };

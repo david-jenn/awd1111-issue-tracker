@@ -10,6 +10,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
+const { date } = require('joi');
 
 //create schemas
 const newBugSchema = Joi.object({
@@ -29,7 +30,7 @@ const classifyBugSchema = Joi.object({
 }).required();
 
 const assignBugSchema = Joi.object({
-  assignedToUserId: Joi.objectId().required(),
+  userAssigned: Joi.objectId().required(),
 }).required();
 
 const closeBugSchema = Joi.object({
@@ -43,6 +44,10 @@ const router = express.Router();
 router.get(
   '/list',
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     //Get inputs
     let { keywords, classification, maxAge, minAge, open, closed, sortBy, pageSize, pageNumber } = req.query;
     minAge = parseInt(minAge);
@@ -122,8 +127,8 @@ router.get(
     pageSize = parseInt(pageSize) || 5;
     const skip = (pageNumber - 1) * pageSize;
     const limit = pageSize;
-    
-    const pipeline = [{ $match: match }, { $sort: sort}, {$skip: skip}, { $limit: limit } ];
+
+    const pipeline = [{ $match: match }, { $sort: sort }, { $skip: skip }, { $limit: limit }];
     debug(pipeline);
 
     const db = await connect();
@@ -136,6 +141,10 @@ router.get(
   '/:bugId',
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
     const bug = await dbModule.findBugById(bugId);
     if (!bug) {
@@ -152,11 +161,28 @@ router.put(
   '/new',
   validBody(newBugSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
     const bug = req.body;
     bug._id = newId();
+    bug.createdDate = new Date();
+    bug.createdBy = req.auth;
+    bug.closed = false;
+    bug.classification = 'unclassified';
     const bugId = bug._id;
 
+    const edit = {
+      timestamp: new Date(),
+      op: 'insert',
+      col: 'bug',
+      target: { bugId: bug._id },
+      update: bug,
+      auth: req.auth,
+    };
+
     await dbModule.insertOneBug(bug);
+    await dbModule.saveEdit(edit);
     res.status(200).json({
       message: `New bug ${bugId} reported`,
     });
@@ -167,19 +193,45 @@ router.put(
   validId('bugId'),
   validBody(updateBugSchema),
   asyncCatch(async (req, res, next) => {
-    const bugId = newId(req.params.bugId);
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
+    const bugId = req.bugId;
     const update = req.body;
 
-    const bug = await dbModule.findBugById(bugId);
-
-    if (!bug) {
-      res.status(404).json({
-        error: `Bug ${bugId} not found`,
-      });
+    
+    if (Object.keys(update).length > 0) {
+      update.lastUpdatedOn = new Date();
+      update.lastUpdatedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      };
     } else {
-      await dbModule.updateOneBug(bugId, update);
+      return res.json({ message: 'No fields edited' });
+    }
+
+    const dbResult = await dbModule.updateOneBug(bugId, update);
+    debug(dbResult);
+
+    if (dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'bug',
+        target: { bugId },
+        update: update,
+        auth: req.auth,
+      };
+      await dbModule.saveEdit(edit);
       res.status(200).json({
         message: `Bug ${bugId} updated`,
+      });
+    } else {
+      res.status(404).json({
+        message: `Bug ${bugId} not found`,
       });
     }
   })
@@ -189,19 +241,45 @@ router.put(
   validId('bugId'),
   validBody(classifyBugSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
-    const { classification } = req.body;
+    const classification = req.body.classification;
 
-    const bug = await dbModule.findBugById(bugId);
+    const update = {};
+    update.lastUpdatedOn = new Date();
+    update.lastUpdatedBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
+    update.classification = classification;
+    update.classifiedOn = new Date();
+    update.classifiedBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
 
-    if (!bug) {
-      res.status(404).json({ Error: `Bug ${bugId} not found` });
+    const dbResult = await dbModule.updateOneBug(bugId, update);
+
+    if (dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'bug',
+        target: { bugId },
+        update: update,
+        auth: req.auth,
+      };
+      await dbModule.saveEdit(edit);
+      res.json({ Message: `Bug ${bugId} classified` });
     } else {
-      await dbModule.updateOneBug(bugId, {
-        classification: classification,
-        classifiedOn: new Date(),
-      });
-      res.status(200).json({ message: `Bug ${bugId} classified`, bugId });
+      res.status(404).json({ Error: `Bug ${bugId} not found` });
     }
   })
 );
@@ -210,29 +288,55 @@ router.put(
   validId('bugId'),
   validBody(assignBugSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
-    const { assignedToUserId, } = req.body;
-    debug(typeof assignedToUserId);
-    const bug = await dbModule.findBugById(bugId);
-    const user = await dbModule.findUserById(assignedToUserId);
-    debug(bug);
-    debug(user);
+    const userAssignedId = newId(req.body.userAssigned);
+    const userAssigned = await dbModule.findUserById(userAssignedId);
+    if (!userAssigned) {
+      return res.status(404).json(`User ${userAssignedId} not found`);
+    }
 
-    if (!bug) {
-      res.status(404).json({ error: `Bug ${bugId} not found` });
-    } else if (!user) {
-      res.status(404).json({ error: 'User not found'});
+    const update = {};
+    update.lastUpdatedOn = new Date();
+    update.lastUpdatedBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
+    update.assignedOn = new Date();
+    update.assignedBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
+    update.assignedTo = {
+      _id: userAssigned._id,
+      email: userAssigned.email,
+      fullName: userAssigned.fullName,
+      role: userAssigned.role,
+    };
+    debug(update);
+
+    const dbResult = await dbModule.updateOneBug(bugId, update);
+
+    if (dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'bug',
+        target: { bugId },
+        update: update,
+        auth: req.auth,
+      };
+      await dbModule.saveEdit(edit);
+      res.json({ Message: `Bug ${bugId} assigned` });
     } else {
-      await dbModule.updateOneBug(bugId, {
-        userAssigned: {
-          userId: assignedToUserId,
-          userName: user.fullName,
-          role: user.role
-        },
-        assignedOn: new Date(),
-      });
-
-      res.status(200).json({ message: `Bug ${bugId} assigned` });
+      res.status(404).json({ Error: `Bug ${bugId} not found` });
     }
   })
 );
@@ -241,26 +345,68 @@ router.put(
   validId('bugId'),
   validBody(closeBugSchema),
   asyncCatch(async (req, res, next) => {
-    const bugId = req.bugId;
-    const { closed } = req.body;
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
 
-    const bug = await dbModule.findBugById(bugId);
-    if (!bug) {
-      res.status(404).json({ message: `Bug ${bugId} not found` });
-    } else if (closed.toLowerCase() == 'true') {
-      await dbModule.updateOneBug(bugId, {
-        closed: true,
-        closedOn: new Date(),
-      });
-      res.status(200).json({ message: `Bug ${bugId} closed` });
-    } else if (closed.toLowerCase() == 'false') {
-      await dbModule.updateOneBug(bugId, {
-        closed: false,
-        closedOn: null,
-      });
-      res.status(200).json({ message: `Bug ${bugId} opened` });
+    const bugId = req.bugId;
+    const closed = req.body.closed;
+    debug(closed);
+    debug(typeof closed);
+
+    const update = {};
+
+    if (closed.toLowerCase() === 'true') {
+      update.lastUpdatedOn = new Date();
+      update.lastUpdatedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      };
+      update.closed = true;
+      update.closedOn = new Date();
+      update.closedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      };
+    } else if (closed.toLowerCase() === 'false') {
+      update.lastUpdatedOn = new Date();
+      update.lastUpdatedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      };
+      update.closed = false;
+      update.closedOn = null;
+      update.closedBy = null;
     } else {
-      res.status(400).json({ error: 'Must enter true or false' });
+      return res.status(400).json({ error: 'Must enter true or false for closed' });
+    }
+
+    const dbResult = await dbModule.updateOneBug(bugId, update);
+    debug(dbResult);
+
+    if (dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'bug',
+        target: { bugId },
+        update: update,
+        auth: req.auth,
+      };
+      await dbModule.saveEdit(edit);
+      if (update.closed) {
+        res.json({ message: `Bug ${bugId} closed` });
+      } else {
+        res.json({ message: `Bug ${bugId} opened` });
+      }
+    } else {
+      res.json({ error: `Bug ${bugId} not found` });
     }
   })
 );

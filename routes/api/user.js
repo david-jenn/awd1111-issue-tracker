@@ -310,15 +310,13 @@ router.put(
         fullName: req.auth.fullName,
         role: req.auth.role,
       };
-    }
-    else {
-      return res.json({message: 'No fields edited'})
+    } else {
+      return res.json({ message: 'No fields edited' });
     }
 
     const dbResult = await dbModule.updateOneUser(userId, update);
 
-    
-    if(dbResult.matchedCount > 0) {
+    if (dbResult.matchedCount > 0) {
       const edit = {
         timestamp: new Date(),
         op: 'update',
@@ -330,12 +328,13 @@ router.put(
 
       if (userId.equals(newId(req.auth._id))) {
         const authPayload = {
-          _id: user._id,
-          email: update.email ?? user.email,
-          fullName: update.fullName ?? user.fullName,
-          role: update.role ?? user.role,
+          _id: req.auth._id,
+          email: update.email ?? req.auth.email,
+          fullName: update.fullName ?? req.auth.fullName,
+          role: update.role ?? req.auth.role,
         };
         debug(authPayload);
+        debug('in the if');
 
         const authSecret = config.get('auth.secret');
         const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
@@ -351,7 +350,7 @@ router.put(
         message: `user ${userId} updated`,
       });
     } else {
-      res.status(404).json({error: `User ${userId} not found`})
+      res.status(404).json({ error: `User ${userId} not found` });
     }
   })
 );
@@ -364,23 +363,23 @@ router.delete(
     }
 
     const userId = req.userId;
-    const user = await dbModule.findUserById(userId);
-    if (!user) {
-      res.status(404).json({
-        Error: `User ${userId} not found`,
-      });
-    } else {
+    const dbResult = await dbModule.deleteOneUser(userId);
+    debug(dbResult);
+    if (dbResult.deletedCount > 0) {
       const edit = {
         timestamp: new Date(),
-        operation: 'delete',
+        op: 'delete',
         col: 'user',
         target: { userId },
         auth: req.auth,
       };
       await dbModule.saveEdit(edit);
-      await dbModule.deleteOneUser(userId);
-      res.status(200).json({
+      res.json({
         message: `User ${userId} deleted`,
+      });
+    } else {
+      res.status(404).json({
+        message: `User ${userId} not found`,
       });
     }
   })

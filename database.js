@@ -82,7 +82,7 @@ async function updateOneUser(userId, update) {
 
 async function deleteOneUser(userId) {
   const db = await connect();
-  await db.collection('user').deleteOne({
+  return await db.collection('user').deleteOne({
     _id: {
       $eq: userId,
     },
@@ -109,16 +109,12 @@ async function findBugById(bugId) {
 
 async function insertOneBug(bug) {
   const db = await connect();
-  await db.collection('bug').insertOne({
-    ...bug,
-    createdDate: new Date(),
-    classification: 'unclassified',
-  });
+  await db.collection('bug').insertOne(bug);
 }
 
 async function updateOneBug(bugId, update) {
   const db = await connect();
-  await db.collection('bug').updateOne(
+  return await db.collection('bug').updateOne(
     {
       _id: {
         $eq: bugId,
@@ -127,7 +123,6 @@ async function updateOneBug(bugId, update) {
     {
       $set: {
         ...update,
-        lastUpdated: new Date(),
       },
     }
   );
@@ -201,7 +196,7 @@ async function updateTestCase(bugId, testId, update) {
     updatedFields['test_cases.$.' + key] = update[key];
   }
 
-  await db
+  return await db
     .collection('bug')
     .updateOne({ _id: { $eq: bugId }, 'test_cases._id': { $eq: testId } }, { $set: updatedFields });
 }

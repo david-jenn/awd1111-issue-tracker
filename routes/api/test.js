@@ -10,9 +10,9 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
+const { json } = require('express');
 
 const insertTestSchema = Joi.object({
-  authorId: Joi.objectId().required(),
   passed: Joi.string().trim().min(4).required(),
   text: Joi.string().trim().min(1).required(),
 });
@@ -31,6 +31,10 @@ router.get(
   '/:bugId/test/list',
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
 
     const testCases = await dbModule.findBugTestCases(bugId);
@@ -43,13 +47,17 @@ router.get(
   validId('bugId'),
   validId('testId'),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
     const testId = req.testId;
 
     const testCase = await dbModule.findOneTestCase(bugId, testId);
 
     if (!testCase) {
-      res.status(404).json({ error: `Test Case ${testId} not found`});
+      res.status(404).json({ error: `Test Case ${testId} not found` });
     } else {
       res.status(200).json(testCase);
     }
@@ -61,18 +69,23 @@ router.put(
   validId('bugId'),
   validBody(insertTestSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
     const bugId = req.bugId;
-    const { authorId, passed, text } = req.body;
-
-    const author = await dbModule.findUserById(authorId);
-    debug(author.role, author.fullName);
+    const { passed, text } = req.body;
 
     const testCase = {
       _id: newId(),
-      authorId: authorId,
-      authorName: author.fullName,
-      authorRole: author.role,
+      author: {
+        id: req.auth._id,
+        name: req.auth.fullName,
+        email: req.auth.email,
+        role: req.auth.role,
+      },
       text: text,
+      bugId: bugId,
+      dateTested: new Date(),
     };
     const testId = testCase._id;
 
@@ -83,7 +96,16 @@ router.put(
     } else {
       res.status(400).json({ error: 'passed must be true or false' });
     }
-    debug(testCase);
+
+    const edit = {
+      timestamp: new Date(),
+      op: 'insert',
+      col: 'testCase',
+      target: { bugId, testId },
+      update: testCase,
+      auth: req.auth,
+    };
+    await dbModule.saveEdit(edit);
     await dbModule.insertTestCase(bugId, testCase);
     res.status(200).json({ message: `Test Case ${testId} created` });
   })
@@ -95,23 +117,33 @@ router.put(
   validId('testId'),
   validBody(updateTestSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
     const testId = req.testId;
-    const { text } = req.body;
-    const testCase = await dbModule.findOneTestCase(bugId, testId);
+    const text = req.body.text;
 
-    debug(testCase);
-    if (!testCase) {
-      res.status(404).json({ error: `Test case ${testId} not found` });
-    } else {
-      const update = {
-        text: text,
-        lastUpdated: new Date(),
-        
+    const update = {
+      text: text,
+    };
+
+    const dbResult = await dbModule.updateTestCase(bugId, testId, update);
+
+    if (dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'testCase',
+        target: { bugId, testId },
+        update: update,
+        auth: req.auth,
       };
-
-      await dbModule.updateTestCase(bugId, testId, update);
+      await dbModule.saveEdit(edit);
       res.status(200).json({ message: `Test Case ${testId} Updated` });
+    } else {
+      res.status(404).json({ error: `Test case ${testId} not found` });
     }
   })
 );
@@ -122,10 +154,39 @@ router.put(
   validId('testId'),
   validBody(executeTestSchema),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
     const bugId = req.bugId;
     const testId = req.testId;
-    const { passed } = req.body;
-    const testCase = await dbModule.findOneTestCase(bugId, testId);
+    const passed  = req.body.passed;
+    const update = {};
+
+    if(passed.toLowerCase() === 'true') {
+      update.passed = true;
+    } else if (passed.toLowerCase === 'false') {
+      update.passed = false;
+    } else {
+      res.status(404).json({error: 'Passed must be true or false'});
+    }
+
+    const dbResult = await dbModule.updateTestCase(bugId, testId, update);
+   
+    if(dbResult.matchedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'update',
+        col: 'testCase',
+        target: { bugId, testId },
+        update: update,
+        auth: req.auth,
+      }
+      await dbModule.saveEdit(edit);
+      res.json({Message: `Test case ${testId} executed`});
+
+    } else {
+      res.status(404).json({error: `Test case ${testId} not found`});
+    }
 
     debug(testCase);
     if (!testCase) {
