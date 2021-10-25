@@ -13,7 +13,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
-const { json } = require('express');
+
 
 //create schemas
 const registerUserSchema = Joi.object({

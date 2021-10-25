@@ -10,7 +10,6 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
-const { json } = require('express');
 
 const insertTestSchema = Joi.object({
   passed: Joi.string().trim().min(4).required(),
@@ -100,7 +99,7 @@ router.put(
     const edit = {
       timestamp: new Date(),
       op: 'insert',
-      col: 'testCase',
+      col: 'testCases',
       target: { bugId, testId },
       update: testCase,
       auth: req.auth,
@@ -135,7 +134,7 @@ router.put(
       const edit = {
         timestamp: new Date(),
         op: 'update',
-        col: 'testCase',
+        col: 'testCases',
         target: { bugId, testId },
         update: update,
         auth: req.auth,
@@ -159,33 +158,32 @@ router.put(
     }
     const bugId = req.bugId;
     const testId = req.testId;
-    const passed  = req.body.passed;
+    const passed = req.body.passed;
     const update = {};
 
-    if(passed.toLowerCase() === 'true') {
+    if (passed.toLowerCase() === 'true') {
       update.passed = true;
     } else if (passed.toLowerCase === 'false') {
       update.passed = false;
     } else {
-      res.status(404).json({error: 'Passed must be true or false'});
+      res.status(404).json({ error: 'Passed must be true or false' });
     }
 
     const dbResult = await dbModule.updateTestCase(bugId, testId, update);
-   
-    if(dbResult.matchedCount > 0) {
+
+    if (dbResult.matchedCount > 0) {
       const edit = {
         timestamp: new Date(),
-        op: 'update',
-        col: 'testCase',
+        op: 'execute',
+        col: 'testCases',
         target: { bugId, testId },
         update: update,
         auth: req.auth,
-      }
+      };
       await dbModule.saveEdit(edit);
-      res.json({Message: `Test case ${testId} executed`});
-
+      res.json({ Message: `Test case ${testId} executed` });
     } else {
-      res.status(404).json({error: `Test case ${testId} not found`});
+      res.status(404).json({ error: `Test case ${testId} not found` });
     }
 
     debug(testCase);
@@ -214,16 +212,27 @@ router.delete(
   validId('bugId'),
   validId('testId'),
   asyncCatch(async (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ error: 'You must be logged in' });
+    }
+
     const bugId = req.bugId;
     const testId = req.testId;
-    const testCase = await dbModule.findOneTestCase(bugId, testId);
+    const dbResult = await dbModule.deleteOneTestCase(bugId, testId);
 
-    debug(testCase);
-    if (!testCase) {
-      res.status(404).json({ error: `Test Case ${testId} not found` });
+    debug(dbResult);
+    if (dbResult.modifiedCount > 0) {
+      const edit = {
+        timestamp: new Date(),
+        op: 'delete',
+        col: 'testCases',
+        target: { bugId, testId },
+        auth: req.auth,
+      };
+      await dbModule.saveEdit(edit);
+      res.json({ message: `Test Case ${testId} Deleted` });
     } else {
-      await dbModule.deleteOneTestCase(bugId, testId);
-      res.status(200).json({ message: `Test Case ${testId} Deleted` });
+      res.json({ error: `Test Case ${testId} not found` });
     }
   })
 );

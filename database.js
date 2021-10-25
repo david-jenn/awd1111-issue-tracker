@@ -203,7 +203,7 @@ async function updateTestCase(bugId, testId, update) {
 
 async function deleteOneTestCase(bugId, testId) {
   const db = await connect();
-  await db.collection('bug').updateOne(
+  return await db.collection('bug').updateOne(
     {
       _id: {
         $eq: bugId,
