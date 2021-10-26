@@ -76,7 +76,7 @@ router.put(
 
     const testCase = {
       _id: newId(),
-      author: {
+      createdBy: {
         id: req.auth._id,
         name: req.auth.fullName,
         email: req.auth.email,
@@ -84,7 +84,7 @@ router.put(
       },
       text: text,
       bugId: bugId,
-      dateTested: new Date(),
+      createdOn: new Date(),
     };
     const testId = testCase._id;
 
@@ -126,7 +126,15 @@ router.put(
 
     const update = {
       text: text,
+      lastUpdatedBy: {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      },
+      lastUpdatedOn: new Date(),
     };
+    debug(update);
 
     const dbResult = await dbModule.updateTestCase(bugId, testId, update);
 
@@ -160,6 +168,13 @@ router.put(
     const testId = req.testId;
     const passed = req.body.passed;
     const update = {};
+    update.executedBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
+    update.executedOn = new Date();
 
     if (passed.toLowerCase() === 'true') {
       update.passed = true;

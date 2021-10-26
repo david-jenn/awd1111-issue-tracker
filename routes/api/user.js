@@ -11,6 +11,7 @@ const { newId, connect } = require('../../database');
 const asyncCatch = require('../../middleware/async-catch');
 const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
+const hasAnyRole = require('../../middleware/hasAnyRole');
 
 const Joi = require('joi');
 
@@ -100,7 +101,7 @@ router.get(
     }
 
     pageNumber = parseInt(pageNumber) || 1;
-    pageSize = parseInt(pageSize) || 20;
+    pageSize = parseInt(pageSize) || 5;
     const skip = (pageNumber - 1) * pageSize;
     const limit = pageSize;
 
@@ -153,15 +154,7 @@ router.post(
         error: `Email ${user.email} already registered`,
       });
     } else {
-      const edit = {
-        timestamp: new Date(),
-        op: 'insert',
-        col: 'user',
-        target: { userId: user._id },
-        update: user,
-        auth: req.auth,
-      };
-
+      
       const authPayload = {
         _id: user._id,
         email: user.email,
@@ -177,6 +170,16 @@ router.post(
       res.cookie('authToken', authToken, cookieOptions);
 
       await dbModule.insertOneUser(user);
+      
+
+      const edit = {
+        timestamp: new Date(),
+        op: 'insert',
+        col: 'user',
+        target: { userId: user._id },
+        update: user,
+        auth: req.auth,
+      };
       await dbModule.saveEdit(edit);
 
       res.status(200).json({

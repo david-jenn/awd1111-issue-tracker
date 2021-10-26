@@ -167,7 +167,12 @@ router.put(
     const bug = req.body;
     bug._id = newId();
     bug.createdDate = new Date();
-    bug.createdBy = req.auth;
+    bug.createdBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    }
     bug.closed = false;
     bug.classification = 'unclassified';
     const bugId = bug._id;
@@ -249,13 +254,6 @@ router.put(
     const classification = req.body.classification;
 
     const update = {};
-    update.lastUpdatedOn = new Date();
-    update.lastUpdatedBy = {
-      _id: req.auth._id,
-      email: req.auth.email,
-      fullName: req.auth.fullName,
-      role: req.auth.role,
-    };
     update.classification = classification;
     update.classifiedOn = new Date();
     update.classifiedBy = {
@@ -300,13 +298,6 @@ router.put(
     }
 
     const update = {};
-    update.lastUpdatedOn = new Date();
-    update.lastUpdatedBy = {
-      _id: req.auth._id,
-      email: req.auth.email,
-      fullName: req.auth.fullName,
-      role: req.auth.role,
-    };
     update.assignedOn = new Date();
     update.assignedBy = {
       _id: req.auth._id,
@@ -357,13 +348,6 @@ router.put(
     const update = {};
 
     if (closed.toLowerCase() === 'true') {
-      update.lastUpdatedOn = new Date();
-      update.lastUpdatedBy = {
-        _id: req.auth._id,
-        email: req.auth.email,
-        fullName: req.auth.fullName,
-        role: req.auth.role,
-      };
       update.closed = true;
       update.closedOn = new Date();
       update.closedBy = {
