@@ -218,6 +218,18 @@ async function saveEdit(edit) {
   const db = await connect();
   return await db.collection('edit').insertOne(edit);
 }
+
+async function findRoleByName(roleName) {
+  const db = await connect();
+  const role = await db.collection('role').findOne({
+    name: {
+      $eq: roleName,
+    },
+  });
+  return role;
+}
+
+
 // export functions
 module.exports = {
   newId,
@@ -242,6 +254,7 @@ module.exports = {
   updateTestCase,
   deleteOneTestCase,
   saveEdit,
+  findRoleByName,
 };
 
 ping();

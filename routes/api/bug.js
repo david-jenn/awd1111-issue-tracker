@@ -10,7 +10,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
-const { date } = require('joi');
+
 
 //create schemas
 const newBugSchema = Joi.object({
