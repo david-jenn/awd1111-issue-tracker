@@ -11,10 +11,10 @@ const { newId, connect } = require('../../database');
 const asyncCatch = require('../../middleware/async-catch');
 const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
-const hasAnyRole = require('../../middleware/hasAnyRole');
+const isLoggedIn = require('../../middleware/isLoggedIn');
+const hasPermissions = require('../../middleware/hasPermissions');
 
 const Joi = require('joi');
-
 
 //create schemas
 const registerUserSchema = Joi.object({
@@ -28,13 +28,17 @@ const loginUserSchema = Joi.object({
   email: Joi.string().trim().required(),
   password: Joi.string().trim().required(),
 });
+const roleSchema = Joi.string().valid('DEV', 'BA', 'QA', 'PM', 'TM');
+
 const updateUserSchema = Joi.object({
   password: Joi.string().trim().min(8),
   fullName: Joi.string().trim().min(2),
   givenName: Joi.string().trim().min(1),
   familyName: Joi.string().trim().min(1),
-  role: Joi.string().trim().valid('DEV', 'BA', 'QA', 'PM', 'TM'),
+  role: Joi.alternatives().try(roleSchema, Joi.array().items(roleSchema)),
 });
+
+
 
 //create router
 const router = express.Router();
@@ -42,11 +46,8 @@ const router = express.Router();
 // register routes
 router.get(
   '/list',
+  hasPermissions('manageUser'),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
     let { keywords, role, maxAge, minAge, sortBy, pageSize, pageNumber } = req.query;
     debug(req.query);
     minAge = parseInt(minAge);
@@ -115,13 +116,26 @@ router.get(
   })
 );
 router.get(
+  '/me',
+  isLoggedIn(),
+  asyncCatch(async (req, res, next) => {
+    const userId = newId(req.auth._id);
+    const user = await dbModule.findUserById(userId);
+    debug(user);
+    if (!user) {
+      res.status(404).json({
+        error: `user ${userId} not found`,
+      });
+    } else {
+      res.status(200).json(user);
+    }
+  })
+);
+router.get(
   '/:userId',
+  hasPermissions('manageUser'),
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
     const userId = req.userId;
     const user = await dbModule.findUserById(userId);
     debug(user);
@@ -154,12 +168,12 @@ router.post(
         error: `Email ${user.email} already registered`,
       });
     } else {
-      
       const authPayload = {
         _id: user._id,
         email: user.email,
         fullName: user.fullName,
         role: null,
+        permissions: {},
       };
 
       const authSecret = config.get('auth.secret');
@@ -170,7 +184,7 @@ router.post(
       res.cookie('authToken', authToken, cookieOptions);
 
       await dbModule.insertOneUser(user);
-      
+      debug(authPayload);
 
       const edit = {
         timestamp: new Date(),
@@ -197,6 +211,7 @@ router.post(
     const { email, password } = req.body;
 
     const user = await dbModule.findUserByEmail(email);
+    debug(user);
 
     if (user && (await bcrypt.compare(password, user.password))) {
       // issue token
@@ -207,6 +222,26 @@ router.post(
         role: user.role,
       };
 
+      const userRoles = Array.isArray(user.role) ? user.role : [user.role];
+      const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
+
+      if (userRoles[0]) {
+        // combine the permission tables
+        const permissions = {};
+        for (const role of roles) {
+          for (const permission in role.permissions) {
+            if (role.permissions[permission]) {
+              permissions[permission] = true;
+            }
+          }
+        }
+        authPayload.permissions = permissions;
+      } else {
+        authPayload.permissions = {};
+      }
+
+      // update the token payload
+      debug(authPayload);
       const authSecret = config.get('auth.secret');
       const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
       const authToken = jwt.sign(authPayload, authSecret, authOptions);
@@ -224,19 +259,25 @@ router.post(
 );
 router.put(
   '/me',
-  validId('userId'),
+  isLoggedIn(),
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
     const userId = newId(req.auth._id);
     const update = req.body;
 
     if (update.password) {
       const saltRounds = parseInt(config.get('auth.saltRounds'));
       update.password = await bcrypt.hash(update.password, saltRounds);
+    }
+
+    if (update.role) {
+      if (!req.auth.permissions['manageUser']) {
+        return res.status(403).json({ error: 'You do not have permission to change your role' });
+      } else if (Array.isArray(update.role)) {
+        // role is already an array
+      } else {
+        update.role = [update.role];
+      }
     }
 
     if (Object.keys(update).length > 0) {
@@ -271,6 +312,26 @@ router.put(
         fullName: update.fullName ?? req.auth.fullName,
         role: update.role ?? req.auth.role,
       };
+
+      const userRoles = Array.isArray(authPayload.role) ? authPayload.role : [authPayload.role];
+      const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
+
+      // combine the permission tables
+      if (update.role) {
+        debug('hello');
+        const permissions = {};
+        for (const role of roles) {
+          for (const permission in role.permissions) {
+            if (role.permissions[permission]) {
+              permissions[permission] = true;
+            }
+          }
+        }
+
+        authPayload.permissions = permissions;
+      } else {
+        authPayload.permissions = req.auth.permissions;
+      }
       debug(authPayload);
 
       const authSecret = config.get('auth.secret');
@@ -290,19 +351,24 @@ router.put(
 );
 router.put(
   '/:userId',
+  hasPermissions('manageUser'),
   validId('userId'),
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
+   
     const userId = req.userId;
     const update = req.body;
 
     if (update.password) {
       const saltRounds = parseInt(config.get('auth.saltRounds'));
       update.password = await bcrypt.hash(update.password, saltRounds);
+    }
+    if (update.role) {
+      if (Array.isArray(update.role)) {
+        // role is already an array
+      } else {
+        update.role = [update.role];
+      }
     }
 
     if (Object.keys(update).length > 0) {
@@ -329,6 +395,8 @@ router.put(
         auth: req.auth,
       };
 
+      await dbModule.saveEdit(edit);
+
       if (userId.equals(newId(req.auth._id))) {
         const authPayload = {
           _id: req.auth._id,
@@ -336,8 +404,27 @@ router.put(
           fullName: update.fullName ?? req.auth.fullName,
           role: update.role ?? req.auth.role,
         };
-        debug(authPayload);
-        debug('in the if');
+
+        const userRoles = Array.isArray(authPayload.role) ? authPayload.role : [authPayload.role];
+        const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
+      
+        // combine the permission tables
+
+        if (update.role) {
+          debug('hello');
+          const permissions = {};
+          for (const role of roles) {
+            for (const permission in role.permissions) {
+              if (role.permissions[permission]) {
+                permissions[permission] = true;
+              }
+            }
+          }
+          debug(req.auth.permissions);
+          authPayload.permissions = permissions;
+        } else {
+          authPayload.permissions = req.auth.permissions;
+        }
 
         const authSecret = config.get('auth.secret');
         const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
@@ -347,8 +434,6 @@ router.put(
         res.cookie('authToken', authToken, cookieOptions);
       }
 
-      await dbModule.updateOneUser(userId, update);
-      await dbModule.saveEdit(edit);
       res.status(200).json({
         message: `user ${userId} updated`,
       });
@@ -359,6 +444,7 @@ router.put(
 );
 router.delete(
   '/:userId',
+  hasPermissions('manageUser'),
   validId('userId'),
   asyncCatch(async (req, res, next) => {
     if (!req.auth) {
