@@ -38,7 +38,42 @@ const updateUserSchema = Joi.object({
   role: Joi.alternatives().try(roleSchema, Joi.array().items(roleSchema)),
 });
 
+async function issueToken(user) {
+  const authPayload = {
+    _id: user._id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+  };
 
+  const userRoles = Array.isArray(user.role) ? user.role : [user.role];
+  const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
+
+  // combine the permission tables
+  const permissions = {};
+  for (const role of roles) {
+    if (role) {
+      for (const permission in role.permissions) {
+        if (role.permissions[permission]) {
+          permissions[permission] = true;
+        }
+      }
+    }
+  }
+
+  authPayload.permissions = permissions;
+  debug(authPayload);
+
+  const authSecret = config.get('auth.secret');
+  const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
+  const authToken = jwt.sign(authPayload, authSecret, authOptions);
+  return authToken;
+}
+
+function sendCookie(res, authToken) {
+  const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
+  res.cookie('authToken', authToken, cookieOptions);
+}
 
 //create router
 const router = express.Router();
@@ -168,23 +203,11 @@ router.post(
         error: `Email ${user.email} already registered`,
       });
     } else {
-      const authPayload = {
-        _id: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        role: null,
-        permissions: {},
-      };
-
-      const authSecret = config.get('auth.secret');
-      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
-      const authToken = jwt.sign(authPayload, authSecret, authOptions);
-
-      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
-      res.cookie('authToken', authToken, cookieOptions);
+      const authToken = await issueToken(user);
+      sendCookie(res, authToken);
+     
 
       await dbModule.insertOneUser(user);
-      debug(authPayload);
 
       const edit = {
         timestamp: new Date(),
@@ -215,39 +238,9 @@ router.post(
 
     if (user && (await bcrypt.compare(password, user.password))) {
       // issue token
-      const authPayload = {
-        _id: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-      };
 
-      const userRoles = Array.isArray(user.role) ? user.role : [user.role];
-      const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
-
-      if (userRoles[0]) {
-        // combine the permission tables
-        const permissions = {};
-        for (const role of roles) {
-          for (const permission in role.permissions) {
-            if (role.permissions[permission]) {
-              permissions[permission] = true;
-            }
-          }
-        }
-        authPayload.permissions = permissions;
-      } else {
-        authPayload.permissions = {};
-      }
-
-      // update the token payload
-      debug(authPayload);
-      const authSecret = config.get('auth.secret');
-      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
-      const authToken = jwt.sign(authPayload, authSecret, authOptions);
-
-      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
-      res.cookie('authToken', authToken, cookieOptions);
+      const authToken = await issueToken(user);
+      sendCookie(res, authToken);
 
       res.json({ message: 'Welcome back', userId: user._id, token: authToken });
     } else {
@@ -269,6 +262,7 @@ router.put(
       const saltRounds = parseInt(config.get('auth.saltRounds'));
       update.password = await bcrypt.hash(update.password, saltRounds);
     }
+    debug(req.auth);
 
     if (update.role) {
       if (!req.auth.permissions['manageUser']) {
@@ -307,39 +301,14 @@ router.put(
       await dbModule.saveEdit(edit);
 
       const authPayload = {
-        _id: userId,
+        _id: req.auth._id,
         email: update.email ?? req.auth.email,
         fullName: update.fullName ?? req.auth.fullName,
         role: update.role ?? req.auth.role,
       };
 
-      const userRoles = Array.isArray(authPayload.role) ? authPayload.role : [authPayload.role];
-      const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
-
-      // combine the permission tables
-      if (update.role) {
-        debug('hello');
-        const permissions = {};
-        for (const role of roles) {
-          for (const permission in role.permissions) {
-            if (role.permissions[permission]) {
-              permissions[permission] = true;
-            }
-          }
-        }
-
-        authPayload.permissions = permissions;
-      } else {
-        authPayload.permissions = req.auth.permissions;
-      }
-      debug(authPayload);
-
-      const authSecret = config.get('auth.secret');
-      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
-      const authToken = jwt.sign(authPayload, authSecret, authOptions);
-
-      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
-      res.cookie('authToken', authToken, cookieOptions);
+      const authToken = await issueToken(authPayload);
+      sendCookie(res, authToken);
 
       res.status(200).json({
         message: `user ${userId} updated`,
@@ -355,7 +324,6 @@ router.put(
   validId('userId'),
   validBody(updateUserSchema),
   asyncCatch(async (req, res, next) => {
-   
     const userId = req.userId;
     const update = req.body;
 
@@ -405,33 +373,8 @@ router.put(
           role: update.role ?? req.auth.role,
         };
 
-        const userRoles = Array.isArray(authPayload.role) ? authPayload.role : [authPayload.role];
-        const roles = await Promise.all(userRoles.map((roleName) => dbModule.findRoleByName(roleName)));
-      
-        // combine the permission tables
-
-        if (update.role) {
-          debug('hello');
-          const permissions = {};
-          for (const role of roles) {
-            for (const permission in role.permissions) {
-              if (role.permissions[permission]) {
-                permissions[permission] = true;
-              }
-            }
-          }
-          debug(req.auth.permissions);
-          authPayload.permissions = permissions;
-        } else {
-          authPayload.permissions = req.auth.permissions;
-        }
-
-        const authSecret = config.get('auth.secret');
-        const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
-        const authToken = jwt.sign(authPayload, authSecret, authOptions);
-
-        const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
-        res.cookie('authToken', authToken, cookieOptions);
+        const authToken = await issueToken(authPayload);
+        sendCookie(res, authToken);
       }
 
       res.status(200).json({
@@ -447,10 +390,6 @@ router.delete(
   hasPermissions('manageUser'),
   validId('userId'),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
     const userId = req.userId;
     const dbResult = await dbModule.deleteOneUser(userId);
     debug(dbResult);

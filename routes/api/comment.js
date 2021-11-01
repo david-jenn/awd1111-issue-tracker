@@ -10,6 +10,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
+const hasPermissions = require('../../middleware/hasPermissions');
 
 const newCommentSchema = Joi.object({
   text: Joi.string().trim().min(1).required(),
@@ -19,6 +20,7 @@ const router = express.Router();
 
 router.get(
   '/:bugId/comment/list',
+  hasPermissions('viewComment'),
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
 
@@ -34,6 +36,7 @@ router.get(
 );
 router.get(
   '/:bugId/comment/:commentId',
+  hasPermissions('viewComment'),
   validId('bugId'),
   validId('commentId'),
   asyncCatch(async (req, res, next) => {
@@ -56,6 +59,7 @@ router.get(
 );
 router.put(
   '/:bugId/comment/new',
+  hasPermissions('createComment'),
   validId('bugId'),
   validBody(newCommentSchema),
   asyncCatch(async (req, res, next) => {
@@ -65,7 +69,7 @@ router.put(
     }
     
     const bugId = req.bugId;
-    const text = req.body;
+    const text = req.body.text;
 
     const comment = {
       _id: newId(),

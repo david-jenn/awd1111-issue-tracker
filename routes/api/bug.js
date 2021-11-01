@@ -10,7 +10,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
-
+const hasPermissions = require('../../middleware/hasPermissions');
 
 //create schemas
 const newBugSchema = Joi.object({
@@ -43,6 +43,7 @@ const router = express.Router();
 // register routes
 router.get(
   '/list',
+  hasPermissions('viewBug'),
   asyncCatch(async (req, res, next) => {
     if (!req.auth) {
       return res.status(401).json({ error: 'You must be logged in' });
@@ -139,6 +140,7 @@ router.get(
 );
 router.get(
   '/:bugId',
+  hasPermissions('viewBug'),
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
     if (!req.auth) {
@@ -159,6 +161,7 @@ router.get(
 );
 router.put(
   '/new',
+  hasPermissions('createBug'),
   validBody(newBugSchema),
   asyncCatch(async (req, res, next) => {
     if (!req.auth) {
@@ -172,7 +175,13 @@ router.put(
       email: req.auth.email,
       fullName: req.auth.fullName,
       role: req.auth.role,
-    }
+    };
+    bug.assignedTo = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
     bug.closed = false;
     bug.classification = 'unclassified';
     const bugId = bug._id;
@@ -195,29 +204,47 @@ router.put(
 );
 router.put(
   '/:bugId',
+  hasPermissions('editBug'),
   validId('bugId'),
   validBody(updateBugSchema),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
+    const userId = newId(req.auth._id);
     const bugId = req.bugId;
     const update = req.body;
 
-    
-    if (Object.keys(update).length > 0) {
-      update.lastUpdatedOn = new Date();
-      update.lastUpdatedBy = {
-        _id: req.auth._id,
-        email: req.auth.email,
-        fullName: req.auth.fullName,
-        role: req.auth.role,
-      };
-    } else {
+    const bug = await dbModule.findBugById(bugId);
+    debug(req.auth);
+    debug(bug.createdBy._id);
+
+    // let allowed = false;
+    // if (req.auth.permissions['editAnyBug']) {
+    //   allowed = true;
+    // } else if (req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy._id).equals(userId)) {
+    //   allowed = true;
+    // } else if (req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo._id).equals(uerId)) {
+    //   allowed = true;
+    // }
+
+    const allowed =
+      req.auth.permissions['editAnyBug'] ||
+      req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy._id).equals(userId) ||
+      req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo._id).equals(uerId);
+
+    if (!allowed) {
+      return res.status(403).json({ error: 'Do not have permission' });
+    }
+
+    if (Object.keys(update).length === 0) {
       return res.json({ message: 'No fields edited' });
     }
 
+    update.lastUpdatedOn = new Date();
+    update.lastUpdatedBy = {
+      _id: req.auth._id,
+      email: req.auth.email,
+      fullName: req.auth.fullName,
+      role: req.auth.role,
+    };
     const dbResult = await dbModule.updateOneBug(bugId, update);
     debug(dbResult);
 
@@ -243,6 +270,7 @@ router.put(
 );
 router.put(
   '/:bugId/classify',
+  hasPermissions('classifyBug'),
   validId('bugId'),
   validBody(classifyBugSchema),
   asyncCatch(async (req, res, next) => {
@@ -286,53 +314,63 @@ router.put(
   validId('bugId'),
   validBody(assignBugSchema),
   asyncCatch(async (req, res, next) => {
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
-
+    const userId = req.auth._id;
     const bugId = req.bugId;
-    const userAssignedId = newId(req.body.userAssigned);
-    const userAssigned = await dbModule.findUserById(userAssignedId);
-    if (!userAssigned) {
-      return res.status(404).json(`User ${userAssignedId} not found`);
-    }
+    const bug = await dbModule.findBugById(bugId);
 
-    const update = {};
-    update.assignedOn = new Date();
-    update.assignedBy = {
-      _id: req.auth._id,
-      email: req.auth.email,
-      fullName: req.auth.fullName,
-      role: req.auth.role,
-    };
-    update.assignedTo = {
-      _id: userAssigned._id,
-      email: userAssigned.email,
-      fullName: userAssigned.fullName,
-      role: userAssigned.role,
-    };
-    debug(update);
-
-    const dbResult = await dbModule.updateOneBug(bugId, update);
-
-    if (dbResult.matchedCount > 0) {
-      const edit = {
-        timestamp: new Date(),
-        op: 'update',
-        col: 'bug',
-        target: { bugId },
-        update: update,
-        auth: req.auth,
-      };
-      await dbModule.saveEdit(edit);
-      res.json({ Message: `Bug ${bugId} assigned` });
+    if (!req.auth.permissions['reassignAnyBug'] && !req.auth.permissions['reassignBug']) {
+      return res.status(403).json({ error: 'You do not have permission' });
+    } else if (
+      !req.auth.permissions['reassignAnyBug'] &&
+      req.auth.permissions['reassignBug'] &&
+      !bug.assignedTo._id.equals(userId)
+    ) {
+      return res.status(403).json({ error: 'You do not have permission' });
     } else {
-      res.status(404).json({ Error: `Bug ${bugId} not found` });
+      const userAssignedId = newId(req.body.userAssigned);
+      const userAssigned = await dbModule.findUserById(userAssignedId);
+      if (!userAssigned) {
+        return res.status(404).json(`User ${userAssignedId} not found`);
+      }
+
+      const update = {};
+      update.assignedOn = new Date();
+      update.assignedBy = {
+        _id: req.auth._id,
+        email: req.auth.email,
+        fullName: req.auth.fullName,
+        role: req.auth.role,
+      };
+      update.assignedTo = {
+        _id: userAssigned._id,
+        email: userAssigned.email,
+        fullName: userAssigned.fullName,
+        role: userAssigned.role,
+      };
+      debug(update);
+
+      const dbResult = await dbModule.updateOneBug(bugId, update);
+
+      if (dbResult.matchedCount > 0) {
+        const edit = {
+          timestamp: new Date(),
+          op: 'update',
+          col: 'bug',
+          target: { bugId },
+          update: update,
+          auth: req.auth,
+        };
+        await dbModule.saveEdit(edit);
+        res.json({ Message: `Bug ${bugId} assigned` });
+      } else {
+        res.status(404).json({ Error: `Bug ${bugId} not found` });
+      }
     }
   })
 );
 router.put(
   '/:bugId/close',
+  hasPermissions('closeBug'),
   validId('bugId'),
   validBody(closeBugSchema),
   asyncCatch(async (req, res, next) => {

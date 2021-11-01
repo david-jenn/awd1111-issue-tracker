@@ -10,6 +10,7 @@ const validId = require('../../middleware/valid-id');
 const validBody = require('../../middleware/valid-body');
 
 const Joi = require('joi');
+const hasPermissions = require('../../middleware/hasPermissions');
 
 const insertTestSchema = Joi.object({
   passed: Joi.string().trim().min(4).required(),
@@ -28,6 +29,7 @@ const router = express.Router();
 
 router.get(
   '/:bugId/test/list',
+  hasPermissions('viewTest'),
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
     if (!req.auth) {
@@ -43,6 +45,7 @@ router.get(
 
 router.get(
   '/:bugId/test/:testId',
+  hasPermissions('viewTest'),
   validId('bugId'),
   validId('testId'),
   asyncCatch(async (req, res, next) => {
@@ -65,6 +68,7 @@ router.get(
 
 router.put(
   '/:bugId/test/new',
+  hasPermissions('manageTest'),
   validId('bugId'),
   validBody(insertTestSchema),
   asyncCatch(async (req, res, next) => {
@@ -112,6 +116,7 @@ router.put(
 
 router.put(
   '/:bugId/test/:testId',
+  hasPermissions('manageTest'),
   validId('bugId'),
   validId('testId'),
   validBody(updateTestSchema),
@@ -157,6 +162,7 @@ router.put(
 
 router.put(
   '/:bugId/test/:testId/execute',
+  hasPermissions('manageTest'),
   validId('bugId'),
   validId('testId'),
   validBody(executeTestSchema),
@@ -224,6 +230,7 @@ router.put(
 
 router.delete(
   '/:bugId/test/:testId',
+  hasPermissions('manageTest'),
   validId('bugId'),
   validId('testId'),
   asyncCatch(async (req, res, next) => {
