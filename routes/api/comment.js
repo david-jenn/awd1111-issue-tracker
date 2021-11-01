@@ -24,9 +24,7 @@ router.get(
   validId('bugId'),
   asyncCatch(async (req, res, next) => {
 
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
+    
 
     const bugId = req.bugId;
     debug(bugId);
@@ -41,9 +39,7 @@ router.get(
   validId('commentId'),
   asyncCatch(async (req, res, next) => {
 
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
+    
 
     const bugId = req.bugId;
     const commentId = req.commentId;
@@ -64,9 +60,7 @@ router.put(
   validBody(newCommentSchema),
   asyncCatch(async (req, res, next) => {
 
-    if (!req.auth) {
-      return res.status(401).json({ error: 'You must be logged in' });
-    }
+    
     
     const bugId = req.bugId;
     const text = req.body.text;
