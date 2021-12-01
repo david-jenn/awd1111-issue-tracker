@@ -205,7 +205,6 @@ router.post(
     } else {
       const authToken = await issueToken(user);
       sendCookie(res, authToken);
-     
 
       await dbModule.insertOneUser(user);
 

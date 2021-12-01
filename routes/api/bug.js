@@ -26,7 +26,7 @@ const updateBugSchema = Joi.object({
 });
 
 const classifyBugSchema = Joi.object({
-  classification: Joi.string().trim().valid('Approved', 'Unapproved', 'Duplicate', 'Unclassified').required(),
+  classification: Joi.string().trim().valid('approved', 'unapproved', 'duplicate', 'unclassified').required(),
 }).required();
 
 const assignBugSchema = Joi.object({
@@ -214,7 +214,7 @@ router.put(
 
     const bug = await dbModule.findBugById(bugId);
     debug(req.auth);
-    debug(bug.createdBy._id);
+    //debug(bug.createdBy._id);
 
     // let allowed = false;
     // if (req.auth.permissions['editAnyBug']) {
@@ -227,8 +227,8 @@ router.put(
 
     const allowed =
       req.auth.permissions['editAnyBug'] ||
-      req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy._id).equals(userId) ||
-      req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo._id).equals(uerId);
+      req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy?._id).equals(userId) ||
+      req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo?._id).equals(userId);
 
     if (!allowed) {
       return res.status(403).json({ error: 'Do not have permission' });
@@ -303,9 +303,9 @@ router.put(
         auth: req.auth,
       };
       await dbModule.saveEdit(edit);
-      res.json({ Message: `Bug ${bugId} classified` });
+      res.json({ message: `Bug ${bugId} classified` });
     } else {
-      res.status(404).json({ Error: `Bug ${bugId} not found` });
+      res.status(404).json({ error: `Bug ${bugId} not found` });
     }
   })
 );
@@ -361,9 +361,9 @@ router.put(
           auth: req.auth,
         };
         await dbModule.saveEdit(edit);
-        res.json({ Message: `Bug ${bugId} assigned` });
+        res.json({ message: `Bug ${bugId} assigned` });
       } else {
-        res.status(404).json({ Error: `Bug ${bugId} not found` });
+        res.status(404).json({ error: `Bug ${bugId} not found` });
       }
     }
   })
