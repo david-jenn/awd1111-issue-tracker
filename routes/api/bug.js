@@ -117,7 +117,7 @@ router.get(
         sort = { classification: 1, createdDate: 1 };
         break;
       case 'assignedTo':
-        sort = { 'userAssigned.userName': 1, createdDate: 1 };
+        sort = { 'assignedTo.fullName': 1, createdDate: 1 };
         break;
       case 'createdBy':
         sort = { 'author.fullName': 1, createdDate: 1 };

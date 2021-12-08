@@ -169,7 +169,7 @@ async function findBugTestCases(bugId) {
       $eq: bugId,
     },
   });
-  return bug.test_cases;
+  return bug.testCases;
 }
 
 async function findOneTestCase(bugId, testId) {
@@ -179,13 +179,13 @@ async function findOneTestCase(bugId, testId) {
       $eq: bugId,
     },
   });
-  return bug.test_cases.find((x) => x._id.equals(testId));
+  return bug.testCases.find((x) => x._id.equals(testId));
 }
 
 async function insertTestCase(bugId, testCase) {
   const db = await connect();
   testCase.dateTested = new Date();
-  await db.collection('bug').updateOne({ _id: { $eq: bugId } }, { $push: { test_cases: testCase } });
+  await db.collection('bug').updateOne({ _id: { $eq: bugId } }, { $push: { testCases: testCase } });
 }
 
 async function updateTestCase(bugId, testId, update) {
@@ -193,12 +193,12 @@ async function updateTestCase(bugId, testId, update) {
 
   const updatedFields = {};
   for (const key in update) {
-    updatedFields['test_cases.$.' + key] = update[key];
+    updatedFields['testCases.$.' + key] = update[key];
   }
 
   return await db
     .collection('bug')
-    .updateOne({ _id: { $eq: bugId }, 'test_cases._id': { $eq: testId } }, { $set: updatedFields });
+    .updateOne({ _id: { $eq: bugId }, 'testCases._id': { $eq: testId } }, { $set: updatedFields });
 }
 
 async function deleteOneTestCase(bugId, testId) {
@@ -208,9 +208,9 @@ async function deleteOneTestCase(bugId, testId) {
       _id: {
         $eq: bugId,
       },
-      'test_cases._id': { $eq: testId },
+      'testCases._id': { $eq: testId },
     },
-    { $pull: { test_cases: { _id: testId } } }
+    { $pull: { testCases: { _id: testId } } }
   );
 }
 
