@@ -179,7 +179,7 @@ async function findOneTestCase(bugId, testId) {
       $eq: bugId,
     },
   });
-  return bug.testCases.find((x) => x._id.equals(testId));
+  return bug.test_Cases.find((x) => x._id.equals(testId));
 }
 
 async function insertTestCase(bugId, testCase) {

@@ -311,6 +311,7 @@ router.put(
 
       res.status(200).json({
         message: `user ${userId} updated`,
+        token: authToken,
       });
     } else {
       res.status(404).json({ error: 'User not found' });
@@ -374,11 +375,17 @@ router.put(
 
         const authToken = await issueToken(authPayload);
         sendCookie(res, authToken);
-      }
 
-      res.status(200).json({
-        message: `user ${userId} updated`,
-      });
+        res.status(200).json({
+          message: `user ${userId} updated`,
+          token: authToken,
+        });
+      } else {
+        res.status(200).json({
+          message: `user ${userId} updated`,
+          
+        });
+      }
     } else {
       res.status(404).json({ error: `User ${userId} not found` });
     }

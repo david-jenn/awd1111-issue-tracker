@@ -25,10 +25,12 @@ router.get(
   asyncCatch(async (req, res, next) => {
 
     
+    
 
     const bugId = req.bugId;
     debug(bugId);
     const comments = await dbModule.findBugComments(bugId);
+    
     res.status(200).json(comments);
   })
 );

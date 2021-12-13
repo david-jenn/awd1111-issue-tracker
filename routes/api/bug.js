@@ -227,8 +227,8 @@ router.put(
 
     const allowed =
       req.auth.permissions['editAnyBug'] ||
-      req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy?._id).equals(userId) ||
-      req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo?._id).equals(userId);
+      (req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy?._id).equals(userId)) ||
+      (req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo?._id).equals(userId));
 
     if (!allowed) {
       return res.status(403).json({ error: 'Do not have permission' });
@@ -395,13 +395,6 @@ router.put(
         role: req.auth.role,
       };
     } else if (closed.toLowerCase() === 'false') {
-      update.lastUpdatedOn = new Date();
-      update.lastUpdatedBy = {
-        _id: req.auth._id,
-        email: req.auth.email,
-        fullName: req.auth.fullName,
-        role: req.auth.role,
-      };
       update.closed = false;
       update.closedOn = null;
       update.closedBy = null;
