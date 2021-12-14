@@ -81,7 +81,7 @@ const router = express.Router();
 // register routes
 router.get(
   '/list',
-  hasPermissions('manageUser'),
+  hasPermissions('viewUser'),
   asyncCatch(async (req, res, next) => {
     let { keywords, role, maxAge, minAge, sortBy, pageSize, pageNumber } = req.query;
     debug(req.query);
@@ -168,7 +168,7 @@ router.get(
 );
 router.get(
   '/:userId',
-  hasPermissions('manageUser'),
+  hasPermissions('viewUser'),
   validId('userId'),
   asyncCatch(async (req, res, next) => {
     const userId = req.userId;

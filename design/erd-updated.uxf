@@ -1,0 +1,711 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="14.3.0">
+  <zoom_level>6</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>504</x>
+      <y>366</y>
+      <w>144</w>
+      <h>216</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;document&gt;&gt;
+bug
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+title: String
+description: String
+stepsToReproduce: String
+createdDate: Date
+closed: boolean
+classification: String
+lastUpdatedOn: Date
+classifiedOn: Date
+assignedOn: Date
+closedOn: Date
+test_cases: bug_test_case[]
+createdBy: bug_createdBy
+lastUpdatedBy: bug_lastUpdatedBy
+assignedBy: bug_assignedBy
+classifiedBy: bug_classifiedBy
+closedBy: bug_closedBy
+assignedTo: bug_assignedTo
+
+
+
+
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>798</x>
+      <y>486</y>
+      <w>144</w>
+      <h>150</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;document&gt;&gt;
+user
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+email:String
+password: String
+givenName: String
+familyName: String
+fullName: String
+role: role[]
+createdDate: Date
+lastUpdatedOn: Date
+lastUpdatedBy: bug_lastUpdatedBy
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>264</x>
+      <y>492</y>
+      <w>120</w>
+      <h>96</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;document&gt;&gt;
+comment
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+dateCreated: Date
+text: String
+author: comment_author
+bug: comment_bug
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>378</x>
+      <y>552</y>
+      <w>138</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=-&lt;
+m2=0..*
+m1=1</panel_attributes>
+    <additional_attributes>210.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>642</x>
+      <y>552</y>
+      <w>168</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&gt;-&lt;
+m1=0..*
+m2=0..*</panel_attributes>
+    <additional_attributes>260.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>204</x>
+      <y>564</y>
+      <w>72</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m2=1
+m1=1</panel_attributes>
+    <additional_attributes>10.0;10.0;100.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>108</x>
+      <y>552</y>
+      <w>102</w>
+      <h>54</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+comment_author
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+name: String
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>834</x>
+      <y>228</y>
+      <w>102</w>
+      <h>126</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;document&gt;&gt;
+edit
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+timestamp: Date
+op: String
+col: String
+target: edit_target
+update: edit_update
+auth: edit_auth
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>642</x>
+      <y>348</y>
+      <w>222</w>
+      <h>78</h>
+    </coordinates>
+    <panel_attributes>lt=&gt;-
+m1=0..*
+m2=1</panel_attributes>
+    <additional_attributes>330.0;10.0;330.0;100.0;10.0;100.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>348</x>
+      <y>426</y>
+      <w>168</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&gt;-
+m1=0..20
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;260.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>216</x>
+      <y>366</y>
+      <w>138</w>
+      <h>108</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_test_case
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+text: String
+testDate: Date
+passed: Boolean
+dateTested: Date
+createdBy: test_case_createdBy
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>504</x>
+      <y>576</y>
+      <w>24</w>
+      <h>102</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;150.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>456</x>
+      <y>666</y>
+      <w>102</w>
+      <h>78</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_createdBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>750</x>
+      <y>84</y>
+      <w>138</w>
+      <h>84</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+edit_auth
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email: String
+fullName: String
+role: role[]
+permission: edit_auth_permission
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>834</x>
+      <y>162</y>
+      <w>24</w>
+      <h>78</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;110.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>852</x>
+      <y>738</y>
+      <w>90</w>
+      <h>78</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+user_lastUpdatedBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>876</x>
+      <y>630</y>
+      <w>24</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;180.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>456</x>
+      <y>222</y>
+      <w>126</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_lastUpdatedBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>606</x>
+      <y>216</y>
+      <w>126</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_assignedBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>510</x>
+      <y>306</y>
+      <w>24</w>
+      <h>72</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;100.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>534</x>
+      <y>102</y>
+      <w>126</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_classifiedBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>588</x>
+      <y>186</y>
+      <w>24</w>
+      <h>192</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;300.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>636</x>
+      <y>300</y>
+      <w>24</w>
+      <h>78</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;110.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>528</x>
+      <y>786</y>
+      <w>126</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_assignedTo
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>576</x>
+      <y>576</y>
+      <w>24</w>
+      <h>222</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;350.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>636</x>
+      <y>576</y>
+      <w>24</w>
+      <h>84</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;120.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>606</x>
+      <y>648</y>
+      <w>126</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+bug_closedBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+email:String
+fullName: String
+role: role[]
+
+
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>198</x>
+      <y>630</y>
+      <w>102</w>
+      <h>54</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+comment_bug
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+title: String
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>276</x>
+      <y>582</y>
+      <w>24</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m2=1
+m1=1</panel_attributes>
+    <additional_attributes>10.0;80.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>48</x>
+      <y>390</y>
+      <w>102</w>
+      <h>66</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+test_case_createdBy
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+name: String
+email: String
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>144</x>
+      <y>438</y>
+      <w>84</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>120.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>894</x>
+      <y>348</y>
+      <w>30</w>
+      <h>150</h>
+    </coordinates>
+    <panel_attributes>lt=&gt;-
+m1=0..*
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;230.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>912</x>
+      <y>102</y>
+      <w>102</w>
+      <h>42</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+edit_target
+--
+_id: ObjectId &lt;&lt;FK&gt;&gt;
+
+
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1044</x>
+      <y>516</y>
+      <w>156</w>
+      <h>66</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;document&gt;&gt;
+role
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+name: String
+permission: role_permissions
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1044</x>
+      <y>654</y>
+      <w>156</w>
+      <h>162</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;subdocument&gt;&gt;
+role_permissions
+--
+_id: ObjectId &lt;&lt;PK&gt;&gt;
+createBug: boolean
+viewBug: boolean
+editBug: boolean
+addComment: boolean
+viewComment: boolean
+viewTest: boolean
+editAuthoredBug: boolean
+editAssignedBug: boolean
+manageUser: boolean
+editAnyBug: boolean
+assignBug: boolean
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>936</x>
+      <y>552</y>
+      <w>120</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&gt;-
+m1=0..5
+m2=1</panel_attributes>
+    <additional_attributes>180.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1146</x>
+      <y>576</y>
+      <w>36</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>lt=&gt;-
+m1=0..20
+m2=1</panel_attributes>
+    <additional_attributes>10.0;130.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>924</x>
+      <y>138</y>
+      <w>24</w>
+      <h>102</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;150.0</additional_attributes>
+  </element>
+</diagram>

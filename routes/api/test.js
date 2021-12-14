@@ -13,7 +13,6 @@ const Joi = require('joi');
 const hasPermissions = require('../../middleware/hasPermissions');
 
 const insertTestSchema = Joi.object({
-  passed: Joi.string().trim().min(4).required(),
   text: Joi.string().trim().min(1).required(),
 });
 
@@ -22,7 +21,7 @@ const updateTestSchema = Joi.object({
 });
 
 const executeTestSchema = Joi.object({
-  passed: Joi.string().trim().min(4).required(),
+  passed: Joi.string().lowercase().valid('true', 'false').required(),
 });
 
 const router = express.Router();
@@ -76,7 +75,7 @@ router.put(
       return res.status(401).json({ error: 'You must be logged in' });
     }
     const bugId = req.bugId;
-    const { passed, text } = req.body;
+    const { text } = req.body;
 
     const testCase = {
       _id: newId(),
@@ -92,13 +91,6 @@ router.put(
     };
     const testId = testCase._id;
 
-    if (passed.toLowerCase() === 'true') {
-      testCase.passed = true;
-    } else if (passed.toLowerCase() === 'false') {
-      testCase.passed = false;
-    } else {
-      res.status(400).json({ error: 'passed must be true or false' });
-    }
 
     const edit = {
       timestamp: new Date(),
@@ -182,14 +174,13 @@ router.put(
     };
     update.executedOn = new Date();
 
-    if (passed.toLowerCase() === 'true') {
+    if(passed === 'true') {
       update.passed = true;
-    } else if (passed.toLowerCase === 'false') {
-      update.passed = false;
-    } else {
-      res.status(404).json({ error: 'Passed must be true or false' });
     }
-
+    if(passed === 'false') {
+      update.passed = false;
+    }
+    
     const dbResult = await dbModule.updateTestCase(bugId, testId, update);
 
     if (dbResult.matchedCount > 0) {

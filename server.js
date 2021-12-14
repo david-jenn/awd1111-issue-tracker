@@ -80,12 +80,12 @@ app.use('/', express.static('public', { index: 'index.html' }));
 
 // register error handlers
 app.use((req, res, next) => {
-  debugError(`sorry count't find ${req.originalURL}`);
-  res.status(404).type('text/plain').send(`Sorry couldn't find ${req.originalUrl}`);
+  debugError('Page not found.');
+  res.status(404).json({ error: 'Page not found.' });
 });
 app.use((err, req, res, next) => {
   debugError(err);
-  res.status(500).json({ error: err.message });
+  res.status(err.status || 500).json({ error: err.message });
 });
 
 // listen for requests

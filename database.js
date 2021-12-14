@@ -169,9 +169,9 @@ async function findBugTestCases(bugId) {
       $eq: bugId,
     },
   });
-  return bug.testCases;
-}
+  return bug.test_cases;
 
+}
 async function findOneTestCase(bugId, testId) {
   const db = await connect();
   const bug = await db.collection('bug').findOne({
@@ -179,7 +179,7 @@ async function findOneTestCase(bugId, testId) {
       $eq: bugId,
     },
   });
-  return bug.test_Cases.find((x) => x._id.equals(testId));
+  return bug.test_cases?.find((x) => x._id.equals(testId));
 }
 
 async function insertTestCase(bugId, testCase) {
