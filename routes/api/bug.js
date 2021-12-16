@@ -199,6 +199,7 @@ router.put(
     await dbModule.saveEdit(edit);
     res.status(200).json({
       message: `New bug ${bugId} reported`,
+      bugId: bugId
     });
   })
 );
@@ -312,6 +313,7 @@ router.put(
 router.put(
   '/:bugId/assign',
   validId('bugId'),
+  hasPermissions('reassignBug'),
   validBody(assignBugSchema),
   asyncCatch(async (req, res, next) => {
     const userId = req.auth._id;
