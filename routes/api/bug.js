@@ -222,7 +222,7 @@ router.put(
     //   allowed = true;
     // } else if (req.auth.permissions['editAuthoredBug'] && newId(bug.createdBy._id).equals(userId)) {
     //   allowed = true;
-    // } else if (req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo._id).equals(uerId)) {
+    // } else if (req.auth.permissions['editAssignedBug'] && newId(bug.assignedTo._id).equals(userId)) {
     //   allowed = true;
     // }
 
@@ -313,19 +313,23 @@ router.put(
 router.put(
   '/:bugId/assign',
   validId('bugId'),
-  hasPermissions('reassignBug'),
+  
+  
   validBody(assignBugSchema),
   asyncCatch(async (req, res, next) => {
     const userId = req.auth._id;
     const bugId = req.bugId;
     const bug = await dbModule.findBugById(bugId);
 
+    debug(userId, bugId, bug);
+
     if (!req.auth.permissions['reassignAnyBug'] && !req.auth.permissions['reassignBug']) {
       return res.status(403).json({ error: 'You do not have permission' });
     } else if (
       !req.auth.permissions['reassignAnyBug'] &&
       req.auth.permissions['reassignBug'] &&
-      !bug.assignedTo._id.equals(userId)
+       bug.assignedTo?._id.equals(userId) 
+      // `${bug.assignedTo._id}` === `${userId}`
     ) {
       return res.status(403).json({ error: 'You do not have permission' });
     } else {
