@@ -328,8 +328,8 @@ router.put(
     } else if (
       !req.auth.permissions['reassignAnyBug'] &&
       req.auth.permissions['reassignBug'] &&
-       bug.assignedTo?._id.equals(userId) 
-      // `${bug.assignedTo._id}` === `${userId}`
+      `${bug.assignedTo._id}` === `${userId}`
+       
     ) {
       return res.status(403).json({ error: 'You do not have permission' });
     } else {
